@@ -1,0 +1,105 @@
+---
+/**
+ * Prédica (RF-15/16):
+ * - MP4 → <video> con preload="none" (carga progresiva solo al reproducir).
+ * - Facebook → portada con botón; el reproductor embebido se carga al hacer clic
+ *   (fachada), con enlace a la publicación original como alternativa.
+ * - Sin archivo ni enlace → placeholder "Contenido pendiente".
+ */
+import Icon from './Icon.astro';
+import SmartImage from './SmartImage.astro';
+import type { Sermon } from '../lib/types';
+import { formatDate } from '../lib/utils';
+
+interface Props { sermon?: Sermon; index?: number }
+const { sermon: s, index = 0 } = Astro.props;
+const fbEmbed = s?.facebookUrl
+  ? `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(s.facebookUrl)}&show_text=false&autoplay=true`
+  : null;
+---
+<article class="card sermon" data-reveal style={`--delay: ${(index % 4) * 80}ms`}>
+  {s?.videoUrl ? (
+    <video class="sermon__media" controls preload="none" poster={s.cover ?? undefined} playsinline>
+      <source src={s.videoUrl} type="video/mp4" />
+      Tu navegador no soporta video HTML5. <a href={s.videoUrl}>Descargar la prédica</a>.
+    </video>
+  ) : fbEmbed ? (
+    <div class="sermon__media sermon__facade" data-fb-facade data-src={fbEmbed}>
+      <SmartImage src={s!.cover} alt={s!.title} ratio="16 / 9" />
+      <button type="button" class="sermon__play" aria-label={`Reproducir: ${s!.title}`}>
+        <Icon name="play" size={26} />
+      </button>
+    </div>
+  ) : (
+    <div class="sermon__media">
+      <SmartImage src={s?.cover} alt={s?.title ?? 'Prédica pendiente'} label={s?.title ?? 'Prédica próximamente'} ratio="16 / 9" />
+      <span class="sermon__badge">Contenido pendiente</span>
+    </div>
+  )}
+  <div class="sermon__body">
+    {s ? (
+      <>
+        <time datetime={s.date}>{formatDate(s.date)}</time>
+        <h3>{s.title}</h3>
+        {s.preacher && <p class="sermon__preacher">{s.preacher}</p>}
+        {s.description && <p class="sermon__desc">{s.description}</p>}
+        {s.facebookUrl && (
+          <a href={s.facebookUrl} target="_blank" rel="noopener" class="sermon__link" data-track="facebook">
+            Ver en Facebook <Icon name="external" size={15} />
+          </a>
+        )}
+      </>
+    ) : (
+      <>
+        <time>Próximamente</time>
+        <h3>Prédica por publicar</h3>
+        <p class="sermon__desc">Muy pronto compartiremos aquí los mensajes de nuestros cultos.</p>
+      </>
+    )}
+  </div>
+</article>
+
+<style>
+  .sermon { display: flex; flex-direction: column; }
+  .sermon__media { position: relative; aspect-ratio: 16 / 9; width: 100%; background: #000; }
+  video.sermon__media { object-fit: cover; }
+  .sermon__media :global(iframe) { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .sermon__play {
+    position: absolute; inset: 0; margin: auto; z-index: 2;
+    width: 64px; height: 64px; border-radius: 50%; border: 0; cursor: pointer;
+    display: grid; place-items: center; padding-left: 4px;
+    background: var(--gold); color: #120d02; box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.8);
+    transition: transform 0.3s var(--ease);
+  }
+  .sermon__play:hover { transform: scale(1.08); }
+  .sermon__badge {
+    position: absolute; top: 12px; left: 12px; z-index: 2;
+    font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 700;
+    padding: 5px 10px; border-radius: 999px; background: rgba(10, 10, 10, 0.75); color: var(--gold-light);
+    border: 1px solid var(--line-gold);
+  }
+  .sermon__body { padding: 20px 22px 24px; display: flex; flex-direction: column; flex: 1; }
+  .sermon__body time { font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); font-weight: 700; }
+  .sermon__body h3 { margin: 6px 0 6px; font-size: 1.2rem; }
+  .sermon__preacher { color: var(--text); font-weight: 600; font-size: 0.92rem; margin: 0 0 6px; }
+  .sermon__desc { color: var(--muted); font-size: 0.94rem; margin: 0; }
+  .sermon__link { margin-top: auto; padding-top: 12px; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 0.9rem; }
+</style>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll<HTMLElement>('[data-fb-facade]').forEach((el) => {
+      const btn = el.querySelector('button');
+      if (!btn || btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        const iframe = document.createElement('iframe');
+        iframe.src = el.dataset.src!;
+        iframe.title = btn.getAttribute('aria-label') ?? 'Prédica';
+        iframe.allow = 'autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share';
+        iframe.allowFullscreen = true;
+        el.replaceChildren(iframe);
+      });
+    });
+  });
+</script>

@@ -1,0 +1,98 @@
+---
+/** Hero de inicio (RF-01): imagen configurable, frase, lema, CTAs y accesos rápidos. */
+import Icon from './Icon.astro';
+import SmartImage from './SmartImage.astro';
+import Wheat from './Wheat.astro';
+import type { SiteInfo } from '../lib/types';
+import { links } from '../lib/utils';
+
+interface Props { site: SiteInfo }
+const { site } = Astro.props;
+const l = links(site);
+---
+<section class="hero" aria-labelledby="hero-title">
+  <div class="hero__bg">
+    <SmartImage src={site.heroImage} alt="" variant="plain" ratio="auto" eager class="hero__img" />
+    <div class="hero__shade"></div>
+    <Wheat class="hero__wheat hero__wheat--a" />
+    <Wheat class="hero__wheat hero__wheat--b" />
+  </div>
+
+  <div class="container hero__content">
+    <p class="hero__kicker anim" style="--d: 0.1s">
+      <span>{site.denomination}</span> · <span>Juigalpa, Chontales</span>
+    </p>
+    <h1 id="hero-title" class="anim" style="--d: 0.25s">
+      Bienvenido a <em>La Cosecha</em>
+    </h1>
+    <p class="hero__lead anim" style="--d: 0.4s">
+      Una familia que comparte el mensaje de Jesucristo, fortalece la fe y sirve con amor a nuestra comunidad.
+    </p>
+    <blockquote class="hero__motto anim" style="--d: 0.55s">
+      “{site.motto}”
+      <cite>{site.mottoRef}</cite>
+    </blockquote>
+    <div class="hero__cta anim" style="--d: 0.7s">
+      <a href="/horarios" class="btn btn--gold"><Icon name="clock" /> Horarios de culto</a>
+      <a href={l.maps} class="btn btn--ghost" target="_blank" rel="noopener" data-track="maps"><Icon name="pin" /> Cómo llegar</a>
+      <a href={l.whatsapp} class="btn btn--ghost" target="_blank" rel="noopener" data-track="whatsapp"><Icon name="whatsapp" /> WhatsApp</a>
+    </div>
+  </div>
+
+  <a href="#bienvenida" class="hero__scroll" aria-label="Ir al contenido">
+    <Icon name="chevron-down" size={22} />
+  </a>
+</section>
+
+<style>
+  .hero {
+    position: relative; min-height: 100svh; display: flex; align-items: center;
+    padding: calc(var(--header-h) + 48px) 0 96px; overflow: hidden; isolation: isolate;
+  }
+  .hero__bg { position: absolute; inset: 0; z-index: -1; }
+  .hero__bg :global(.hero__img) { position: absolute; inset: 0; aspect-ratio: auto; animation: hero-zoom 18s ease-out both; }
+  .hero__shade {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 75% 30%, rgba(227, 169, 43, 0.22), transparent 55%),
+      linear-gradient(90deg, rgba(10, 10, 10, 0.92) 0%, rgba(10, 10, 10, 0.65) 55%, rgba(10, 10, 10, 0.35) 100%),
+      linear-gradient(to top, var(--black) 0%, transparent 40%);
+  }
+  .hero :global(.hero__wheat) { position: absolute; color: var(--gold); pointer-events: none; }
+  .hero :global(.hero__wheat--a) { right: 6%; top: 18%; width: clamp(160px, 22vw, 320px); opacity: 0.16; transform: rotate(14deg); animation: sway 9s ease-in-out infinite; }
+  .hero :global(.hero__wheat--b) { right: 22%; bottom: 6%; width: clamp(90px, 11vw, 170px); opacity: 0.1; transform: rotate(-12deg); animation: sway 11s ease-in-out infinite reverse; }
+
+  .hero__content { position: relative; }
+  .hero__kicker {
+    display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    font-size: 0.8rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--gold); padding: 8px 16px; border: 1px solid var(--line-gold); border-radius: 999px;
+    background: rgba(10, 10, 10, 0.4); margin-bottom: 26px;
+  }
+  .hero h1 { max-width: 14ch; margin-bottom: 22px; }
+  .hero h1 em { font-style: italic; color: var(--gold); }
+  .hero__lead { font-size: clamp(1.1rem, 1.8vw, 1.3rem); max-width: 54ch; color: var(--text); margin-bottom: 26px; }
+  .hero__motto {
+    margin: 0 0 36px; padding-left: 18px; border-left: 2px solid var(--gold);
+    font-family: var(--font-display); font-style: italic; font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+    color: var(--white); max-width: 46ch;
+  }
+  .hero__motto cite { display: block; margin-top: 6px; font-family: var(--font-body); font-style: normal; font-size: 0.8rem; letter-spacing: 0.12em; color: var(--gold); }
+  .hero__cta { display: flex; flex-wrap: wrap; gap: 12px; }
+
+  .hero__scroll {
+    position: absolute; left: 50%; bottom: 24px; translate: -50% 0;
+    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    border: 1px solid var(--line); color: var(--white); animation: bob 2.4s ease-in-out infinite;
+  }
+
+  .anim { animation: rise 1s var(--ease) both; animation-delay: var(--d, 0s); }
+  @keyframes rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
+  @keyframes hero-zoom { from { transform: scale(1.08); } to { transform: scale(1); } }
+  @keyframes sway { 0%, 100% { rotate: 0deg; } 50% { rotate: 4deg; } }
+  @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+
+  @media (max-width: 560px) {
+    .hero__cta .btn { flex: 1 1 100%; }
+  }
+</style>

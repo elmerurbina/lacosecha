@@ -1,0 +1,67 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageHero from '../components/PageHero.astro';
+import ScheduleList from '../components/ScheduleList.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import Icon from '../components/Icon.astro';
+import { getSchedules, getSiteInfo, prayerNote } from '../lib/content';
+import { links } from '../lib/utils';
+
+const site = await getSiteInfo();
+const schedules = await getSchedules();
+const l = links(site);
+---
+<Layout title="Horarios y ubicación" description={`Horarios de culto y reuniones de la ${site.name}. Dirección: ${site.address}.`}>
+  <PageHero eyebrow="Horarios y ubicación" title="Te esperamos con los brazos abiertos" lead="Consulta nuestros días de culto y reuniones, y encuentra cómo llegar." />
+
+  <section class="section">
+    <div class="container">
+      <SectionHeading eyebrow="Horarios" title="Cultos y reuniones semanales" />
+      <ScheduleList items={schedules} note={prayerNote} />
+      <p class="muted note" data-reveal><Icon name="info" size={18} /> Los horarios pueden variar en fechas especiales. Mantente atento a nuestras redes sociales.</p>
+    </div>
+  </section>
+
+  <section class="section section--alt" id="ubicacion">
+    <div class="container location">
+      <div data-reveal="left">
+        <p class="eyebrow">Ubicación</p>
+        <h2>Cómo llegar</h2>
+        <address>
+          <Icon name="pin" size={22} />
+          <span>{site.address}<br /><span class="muted">{site.city}</span></span>
+        </address>
+        <div class="location__actions">
+          <a href={l.maps} class="btn btn--gold" target="_blank" rel="noopener" data-track="maps"><Icon name="navigation" /> Abrir en Google Maps</a>
+          <a href={l.whatsapp} class="btn btn--ghost" target="_blank" rel="noopener" data-track="whatsapp"><Icon name="whatsapp" /> Pedir indicaciones</a>
+        </div>
+      </div>
+      <div class="map" data-reveal="right">
+        <iframe
+          src={l.mapEmbed}
+          title="Mapa de la ubicación de la Comunidad Evangélica La Cosecha"
+          loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"
+        ></iframe>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .note { display: flex; align-items: center; gap: 8px; margin-top: 24px; font-size: 0.92rem; }
+  .note :global(svg) { color: var(--gold); flex: none; }
+  .location { display: grid; gap: 40px; align-items: center; }
+  @media (min-width: 900px) { .location { grid-template-columns: 0.9fr 1.1fr; gap: 64px; } }
+  address {
+    display: flex; gap: 14px; align-items: flex-start; font-style: normal;
+    font-size: 1.1rem; color: var(--white); margin: 8px 0 28px;
+  }
+  address :global(svg) { color: var(--gold); flex: none; margin-top: 3px; }
+  .location__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  .map {
+    border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--line-gold);
+    aspect-ratio: 4 / 3; background: var(--surface-3);
+  }
+  .map iframe { width: 100%; height: 100%; border: 0; filter: grayscale(0.4) contrast(1.05); }
+</style>

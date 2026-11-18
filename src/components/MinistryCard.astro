@@ -1,0 +1,98 @@
+---
+import Icon from './Icon.astro';
+import SmartImage from './SmartImage.astro';
+import type { Ministry } from '../lib/types';
+
+interface Props { ministry: Ministry; index?: number }
+const { ministry: m, index = 0 } = Astro.props;
+const panelId = `ministry-${m.id}`;
+---
+<article class="card ministry" data-reveal style={`--delay: ${(index % 3) * 90}ms`} data-expandable>
+  <SmartImage src={m.image} alt={m.name} ratio="16 / 10" />
+  <div class="ministry__body">
+    <span class="ministry__icon"><Icon name={m.icon} /></span>
+    <h3>{m.name}</h3>
+    <p class="ministry__summary">{m.summary}</p>
+
+    <div class="ministry__panel" id={panelId} data-panel>
+      <div class="ministry__panel-inner">
+        <p>{m.description}</p>
+        {m.activities.length > 0 && (
+          <>
+            <h4>Actividades</h4>
+            <ul>{m.activities.map((a) => <li>{a}</li>)}</ul>
+          </>
+        )}
+        {m.leaders.length > 0 && (
+          <>
+            <h4>{m.leaders.length > 1 ? 'Líderes' : 'Líder'}</h4>
+            <p class="ministry__leaders"><Icon name="users" size={18} /> {m.leaders.join(', ')}</p>
+          </>
+        )}
+      </div>
+    </div>
+
+    <button type="button" class="ministry__toggle" aria-expanded="false" aria-controls={panelId} data-toggle>
+      <span data-label>Ver más</span>
+      <Icon name="chevron-down" size={18} />
+    </button>
+  </div>
+</article>
+
+<style>
+  .ministry { display: flex; flex-direction: column; }
+  .ministry__body { position: relative; padding: 32px 24px 22px; flex: 1; display: flex; flex-direction: column; }
+  .ministry__icon {
+    position: absolute; top: -26px; left: 24px;
+    width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center;
+    background: var(--gold); color: #120d02; box-shadow: 0 10px 24px -10px rgba(227, 169, 43, 0.7);
+    z-index: 2;
+  }
+  .ministry h3 { margin-bottom: 6px; }
+  .ministry__summary { color: var(--muted); margin-bottom: 8px; }
+  .ministry__panel {
+    display: grid; grid-template-rows: 0fr;
+    transition: grid-template-rows 0.45s var(--ease);
+  }
+  .ministry__panel-inner { overflow: hidden; visibility: hidden; transition: visibility 0s 0.45s; }
+  .ministry.is-open .ministry__panel { grid-template-rows: 1fr; }
+  .ministry.is-open .ministry__panel-inner { visibility: visible; transition-delay: 0s; }
+  html:not(.js) .ministry__panel { grid-template-rows: 1fr; }
+  html:not(.js) .ministry__panel-inner { visibility: visible; }
+  html:not(.js) .ministry__toggle { display: none; }
+  .ministry__panel-inner > :first-child { margin-top: 8px; }
+  .ministry h4 {
+    font-family: var(--font-body); font-size: 0.75rem; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--gold); margin: 16px 0 6px;
+  }
+  .ministry ul { margin: 0; padding-left: 18px; color: var(--text); }
+  .ministry ul li::marker { color: var(--gold); }
+  .ministry__leaders { display: flex; gap: 8px; align-items: flex-start; margin: 0; }
+  .ministry__leaders :global(svg) { color: var(--gold); flex: none; margin-top: 4px; }
+  .ministry__toggle {
+    margin-top: auto; align-self: flex-start;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 0 2px; min-height: 44px; background: none; border: 0; cursor: pointer;
+    color: var(--gold-light); font: 700 0.92rem var(--font-body);
+  }
+  .ministry__toggle :global(svg) { transition: transform 0.35s var(--ease); }
+  .ministry.is-open .ministry__toggle :global(svg) { transform: rotate(180deg); }
+  .ministry__toggle:hover { color: var(--gold); }
+</style>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll<HTMLElement>('[data-expandable]').forEach((card) => {
+      const btn = card.querySelector<HTMLButtonElement>('[data-toggle]');
+      const label = card.querySelector('[data-label]');
+      if (!btn || btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        const open = !card.classList.contains('is-open');
+        card.classList.toggle('is-open', open);
+        btn.setAttribute('aria-expanded', String(open));
+        if (label) label.textContent = open ? 'Ver menos' : 'Ver más';
+      });
+    });
+  });
+</script>

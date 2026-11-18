@@ -1,0 +1,53 @@
+---
+/**
+ * Logotipo de la iglesia. Carga `siteInfo.logo` (por defecto /images/logo.png).
+ * Si el archivo no existe, muestra un emblema de respaldo con la espiga dorada.
+ */
+import Wheat from './Wheat.astro';
+import { siteInfo } from '../data/seed';
+
+interface Props { size?: number; withText?: boolean }
+const { size = 48, withText = true } = Astro.props;
+---
+<span class="logo" style={`--size: ${size}px`}>
+  <span class="logo__mark">
+    <span class="logo__fallback" aria-hidden="true"><Wheat /></span>
+    {siteInfo.logo && (
+      <img src={siteInfo.logo} alt="" width={size} height={size} decoding="async" onerror="this.remove()" />
+    )}
+  </span>
+  {withText && (
+    <span class="logo__text">
+      <span class="logo__small">Comunidad Evangélica</span>
+      <span class="logo__name">La Cosecha</span>
+    </span>
+  )}
+</span>
+
+<style>
+  .logo { display: inline-flex; align-items: center; gap: 12px; }
+  .logo__mark {
+    position: relative; width: var(--size); height: var(--size); flex: none;
+    border-radius: 50%;
+  }
+  .logo__mark img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: contain; z-index: 1;
+  }
+  .logo__fallback {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    border-radius: 50%; color: var(--gold);
+    background: radial-gradient(circle, #1d1a14 0%, #0b0a08 70%);
+    border: 1.5px solid var(--gold);
+    box-shadow: inset 0 0 0 3px var(--black), inset 0 0 0 4px rgba(227, 169, 43, 0.35);
+  }
+  .logo__fallback :global(svg) { width: 58%; height: 58%; }
+  .logo__text { display: flex; flex-direction: column; line-height: 1.05; }
+  .logo__small {
+    font-size: 0.62rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+  .logo__name {
+    font-family: var(--font-display); font-size: 1.35rem; color: var(--white); font-weight: 600;
+  }
+</style>

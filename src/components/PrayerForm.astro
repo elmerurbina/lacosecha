@@ -1,0 +1,197 @@
+---
+/**
+ * Formulario de peticiones de oración (RF-19, RNF-17/19/42).
+ * - Validación en cliente (HTML5 + JS); la base de datos vuelve a validar con CHECKs y triggers.
+ * - Antispam: campo trampa (honeypot), tiempo mínimo de llenado y límite local de envíos.
+ * - Consentimiento explícito con enlace al aviso de privacidad.
+ */
+import Icon from './Icon.astro';
+---
+<form class="prayer" data-prayer-form novalidate>
+  <div class="prayer__row">
+    <div class="field">
+      <label for="pr-name">Nombre <span class="opt">(opcional)</span></label>
+      <input id="pr-name" name="name" type="text" maxlength="80" autocomplete="name" placeholder="¿Cómo te llamas?" />
+    </div>
+    <div class="field">
+      <label for="pr-contact">Teléfono o correo <span class="opt">(opcional)</span></label>
+      <input id="pr-contact" name="contact" type="text" maxlength="120" autocomplete="email" placeholder="Si deseas que te contactemos" aria-describedby="pr-contact-err" />
+      <p class="field__error" id="pr-contact-err" data-error="contact"></p>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="pr-request">Tu petición <span class="req" aria-hidden="true">*</span></label>
+    <textarea id="pr-request" name="request" rows="6" required minlength="10" maxlength="1500" placeholder="Escribe aquí tu motivo de oración…" aria-describedby="pr-request-help pr-request-err"></textarea>
+    <div class="field__meta">
+      <p class="field__help" id="pr-request-help">Mínimo 10 caracteres.</p>
+      <span class="field__count" data-count aria-hidden="true">0 / 1500</span>
+    </div>
+    <p class="field__error" id="pr-request-err" data-error="request"></p>
+  </div>
+
+  <div class="field field--check">
+    <input id="pr-share" name="is_private" type="checkbox" checked />
+    <label for="pr-share">Mantener mi petición confidencial (solo la verá el equipo pastoral).</label>
+  </div>
+
+  <div class="field field--check">
+    <input id="pr-consent" name="consent" type="checkbox" required aria-describedby="pr-consent-err" />
+    <label for="pr-consent">
+      Acepto que la información enviada se use únicamente para orar por mí y, si lo indiqué, contactarme.
+      Las peticiones se eliminan automáticamente después de 3 meses. <a href="/privacidad">Aviso de privacidad</a>.
+    </label>
+  </div>
+  <p class="field__error" id="pr-consent-err" data-error="consent"></p>
+
+  <!-- Honeypot: los humanos no lo ven -->
+  <div class="hp" aria-hidden="true">
+    <label for="pr-website">Sitio web</label>
+    <input id="pr-website" name="website" type="text" tabindex="-1" autocomplete="off" />
+  </div>
+
+  <button type="submit" class="btn btn--gold" data-submit>
+    <Icon name="heart" /> <span data-submit-label>Enviar petición</span>
+  </button>
+
+  <div class="prayer__status" role="status" aria-live="polite" data-status></div>
+</form>
+
+<script>
+  import { insertRow, isConfigured } from '../lib/supabase-client';
+
+  const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const PHONE = /^\+?[\d\s()-]{7,20}$/;
+  const LIMIT_KEY = 'lc-prayer-sent';
+
+  function recentSends(): number[] {
+    try { return (JSON.parse(localStorage.getItem(LIMIT_KEY) || '[]') as number[]).filter((t) => Date.now() - t < 3600_000); }
+    catch { return []; }
+  }
+
+  function init(form: HTMLFormElement) {
+    if (form.dataset.ready) return;
+    form.dataset.ready = '1';
+    const startedAt = Date.now();
+    const status = form.querySelector<HTMLElement>('[data-status]')!;
+    const submit = form.querySelector<HTMLButtonElement>('[data-submit]')!;
+    const submitLabel = form.querySelector<HTMLElement>('[data-submit-label]')!;
+    const textarea = form.querySelector<HTMLTextAreaElement>('#pr-request')!;
+    const counter = form.querySelector<HTMLElement>('[data-count]')!;
+
+    textarea.addEventListener('input', () => { counter.textContent = `${textarea.value.length} / 1500`; });
+
+    const setError = (name: string, msg: string) => {
+      const el = form.querySelector<HTMLElement>(`[data-error="${name}"]`);
+      const input = form.elements.namedItem(name) as HTMLInputElement | null;
+      if (el) el.textContent = msg;
+      input?.setAttribute('aria-invalid', msg ? 'true' : 'false');
+    };
+
+    const showStatus = (type: 'ok' | 'error', msg: string) => {
+      status.className = `prayer__status is-${type}`;
+      status.textContent = msg;
+    };
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const data = new FormData(form);
+      const name = String(data.get('name') || '').trim();
+      const contact = String(data.get('contact') || '').trim();
+      const request = String(data.get('request') || '').trim();
+      const consent = data.get('consent') === 'on';
+      let valid = true;
+
+      setError('request', ''); setError('contact', ''); setError('consent', '');
+      if (request.length < 10) { setError('request', 'Por favor escribe tu petición (mínimo 10 caracteres).'); valid = false; }
+      if (request.length > 1500) { setError('request', 'La petición no puede superar 1500 caracteres.'); valid = false; }
+      if (contact && !EMAIL.test(contact) && !PHONE.test(contact)) { setError('contact', 'Ingresa un correo o número de teléfono válido.'); valid = false; }
+      if (!consent) { setError('consent', 'Debes aceptar el uso de la información para enviar tu petición.'); valid = false; }
+      if (!valid) {
+        form.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+        return;
+      }
+
+      // Antispam: bots que llenan el honeypot o envían demasiado rápido reciben un "éxito" silencioso.
+      if (data.get('website') || Date.now() - startedAt < 3000) {
+        form.reset();
+        showStatus('ok', 'Gracias. Tu petición fue recibida y estaremos orando por ti.');
+        return;
+      }
+      if (recentSends().length >= 3) {
+        showStatus('error', 'Has enviado varias peticiones recientemente. Intenta de nuevo más tarde o escríbenos por WhatsApp.');
+        return;
+      }
+
+      submit.disabled = true;
+      submitLabel.textContent = 'Enviando…';
+      try {
+        if (!isConfigured) throw new Error('not-configured');
+        await insertRow('prayer_requests', {
+          name: name || null,
+          contact: contact || null,
+          request,
+          is_private: data.get('is_private') === 'on',
+          consent: true,
+        });
+        try { localStorage.setItem(LIMIT_KEY, JSON.stringify([...recentSends(), Date.now()])); } catch {}
+        form.reset();
+        counter.textContent = '0 / 1500';
+        showStatus('ok', 'Gracias. Tu petición fue recibida y estaremos orando por ti. 🙏');
+      } catch (err) {
+        const code = (err as Error).message;
+        showStatus(
+          'error',
+          code === 'not-configured'
+            ? 'El envío en línea estará disponible muy pronto. Mientras tanto, puedes enviarnos tu petición por WhatsApp.'
+            : code === 'rate-limited'
+              ? 'Estamos recibiendo muchas peticiones en este momento. Intenta de nuevo en unos minutos.'
+              : 'No pudimos enviar tu petición. Revisa tu conexión e intenta de nuevo, o escríbenos por WhatsApp.',
+        );
+      } finally {
+        submit.disabled = false;
+        submitLabel.textContent = 'Enviar petición';
+      }
+    });
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll<HTMLFormElement>('[data-prayer-form]').forEach(init);
+  });
+</script>
+
+<style>
+  .prayer { display: grid; gap: 18px; }
+  .prayer__row { display: grid; gap: 18px; }
+  @media (min-width: 640px) { .prayer__row { grid-template-columns: 1fr 1fr; } }
+  .field { display: grid; gap: 6px; }
+  .field label { font-weight: 600; font-size: 0.93rem; color: var(--white); }
+  .opt { color: var(--muted); font-weight: 400; }
+  .req { color: var(--gold); }
+  .field input[type='text'], .field textarea {
+    width: 100%; padding: 13px 15px; border-radius: 12px;
+    background: var(--surface); color: var(--white);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    font: inherit; font-size: 1rem; resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .field input::placeholder, .field textarea::placeholder { color: #8a8478; }
+  .field input:focus, .field textarea:focus {
+    outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(227, 169, 43, 0.25);
+  }
+  .field [aria-invalid='true'] { border-color: #ff8a7a; }
+  .field__meta { display: flex; justify-content: space-between; gap: 12px; }
+  .field__help, .field__count { margin: 0; font-size: 0.82rem; color: var(--muted); }
+  .field__error { margin: 0; font-size: 0.86rem; color: #ffb4a8; min-height: 0; }
+  .field__error:empty { display: none; }
+  .field--check { grid-template-columns: auto 1fr; align-items: start; gap: 12px; }
+  .field--check input { width: 20px; height: 20px; margin-top: 3px; accent-color: var(--gold); }
+  .field--check label { font-weight: 400; color: var(--text); font-size: 0.92rem; }
+  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+  .prayer .btn { justify-self: start; }
+  .prayer .btn:disabled { opacity: 0.6; cursor: progress; transform: none; }
+  .prayer__status:empty { display: none; }
+  .prayer__status { padding: 14px 16px; border-radius: 12px; font-size: 0.95rem; }
+  .prayer__status.is-ok { background: rgba(120, 200, 140, 0.12); border: 1px solid rgba(120, 200, 140, 0.4); color: #c8f0d2; }
+  .prayer__status.is-error { background: rgba(255, 120, 100, 0.1); border: 1px solid rgba(255, 140, 120, 0.4); color: #ffd0c8; }
+</style>

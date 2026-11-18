@@ -1,0 +1,75 @@
+---
+/** Publicaciones y fotografías destacadas (RF-12) con botón "Ver más". */
+import SmartImage from './SmartImage.astro';
+import type { GalleryItem } from '../lib/types';
+
+interface Props { items: GalleryItem[]; initial?: number }
+const { items, initial = 6 } = Astro.props;
+const sorted = [...items].sort((a, b) => Number(!!b.featured) - Number(!!a.featured));
+---
+{sorted.length === 0 ? (
+  <p class="empty">Aún no hay fotografías publicadas.</p>
+) : (
+  <div class="gallery" data-gallery>
+    <ul class="gallery__grid">
+      {sorted.map((g, i) => (
+        <li class:list={['gallery__item', { 'is-hidden': i >= initial }]} data-reveal style={`--delay: ${(i % 3) * 70}ms`}>
+          <figure>
+            <SmartImage src={g.image} alt={g.title} label="" ratio={i % 5 === 0 ? '4 / 5' : '4 / 3'} />
+            <figcaption>
+              <strong>{g.title}</strong>
+              {g.description && <span>{g.description}</span>}
+            </figcaption>
+          </figure>
+        </li>
+      ))}
+    </ul>
+    {sorted.length > initial && (
+      <div class="gallery__more">
+        <button type="button" class="btn btn--ghost" data-gallery-more aria-expanded="false">
+          Ver más fotografías
+        </button>
+      </div>
+    )}
+  </div>
+)}
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll<HTMLElement>('[data-gallery]').forEach((g) => {
+      const btn = g.querySelector<HTMLButtonElement>('[data-gallery-more]');
+      if (!btn || btn.dataset.bound) return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        const hidden = g.querySelectorAll<HTMLElement>('.gallery__item.is-hidden');
+        hidden.forEach((el) => { el.classList.remove('is-hidden'); el.classList.add('is-visible'); });
+        hidden[0]?.querySelector<HTMLElement>('figure')?.setAttribute('tabindex', '-1');
+        hidden[0]?.querySelector<HTMLElement>('figure')?.focus({ preventScroll: true });
+        btn.parentElement?.remove();
+      });
+    });
+  });
+</script>
+
+<style>
+  .gallery__grid {
+    list-style: none; margin: 0; padding: 0;
+    columns: 3 280px; column-gap: 20px;
+  }
+  .gallery__item { break-inside: avoid; margin-bottom: 20px; }
+  .gallery__item.is-hidden { display: none; }
+  .gallery figure {
+    margin: 0; position: relative; border-radius: var(--radius-lg); overflow: hidden;
+    border: 1px solid var(--line);
+  }
+  .gallery figure :global(.smart-img img) { transition: transform 0.8s var(--ease); }
+  .gallery figure:hover :global(.smart-img img) { transform: scale(1.05); }
+  .gallery figcaption {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+    padding: 36px 18px 16px; display: flex; flex-direction: column;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.88), transparent);
+  }
+  .gallery figcaption strong { color: var(--white); font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; }
+  .gallery figcaption span { color: var(--muted); font-size: 0.88rem; }
+  .gallery__more { text-align: center; margin-top: 16px; }
+</style>

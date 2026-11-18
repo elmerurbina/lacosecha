@@ -1,0 +1,39 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageHero from '../components/PageHero.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import Calendar from '../components/Calendar.astro';
+import AnnouncementList from '../components/AnnouncementList.astro';
+import Gallery from '../components/Gallery.astro';
+import { getAnnouncements, getEvents, getGallery, getSchedules } from '../lib/content';
+
+const [events, schedules, announcements, gallery] = await Promise.all([
+  getEvents(), getSchedules(), getAnnouncements(), getGallery(),
+]);
+---
+<Layout title="Eventos y noticias" description="Calendario de eventos, anuncios y galería de fotografías de la Comunidad Evangélica La Cosecha.">
+  <PageHero eyebrow="Eventos y noticias" title="Vive cada momento con nosotros" lead="Consulta el calendario de actividades, los anuncios más recientes y las fotografías de nuestra comunidad." />
+
+  <section class="section" id="calendario">
+    <div class="container">
+      <SectionHeading eyebrow="Calendario" title="Calendario de eventos" lead="Navega por mes, semana o día. Selecciona una fecha para ver sus actividades." />
+      <div data-reveal>
+        <Calendar events={events} schedules={schedules} />
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--alt" id="anuncios">
+    <div class="container">
+      <SectionHeading eyebrow="Anuncios" title="Comunicados" />
+      <AnnouncementList items={announcements} />
+    </div>
+  </section>
+
+  <section class="section" id="galeria">
+    <div class="container">
+      <SectionHeading eyebrow="Galería" title="Publicaciones y fotografías" />
+      <Gallery items={gallery} initial={6} />
+    </div>
+  </section>
+</Layout>

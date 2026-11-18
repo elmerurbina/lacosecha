@@ -1,0 +1,321 @@
+---
+/**
+ * Calendario interactivo (RF-08): vistas mensual, semanal y diaria, navegación entre
+ * periodos, selector de fecha y mensaje cuando no hay eventos.
+ * Los cultos semanales pueden mostrarse u ocultarse con un interruptor.
+ */
+import Icon from './Icon.astro';
+import type { ChurchEvent, Schedule } from '../lib/types';
+
+interface Props { events: ChurchEvent[]; schedules: Schedule[] }
+const { events, schedules } = Astro.props;
+const payload = JSON.stringify({ events, schedules });
+---
+<div class="cal" data-calendar data-payload={payload}>
+  <div class="cal__toolbar">
+    <div class="cal__nav">
+      <button type="button" class="cal__icon-btn" data-prev aria-label="Periodo anterior"><Icon name="chevron-left" size={20} /></button>
+      <button type="button" class="btn btn--sm btn--ghost" data-today>Hoy</button>
+      <button type="button" class="cal__icon-btn" data-next aria-label="Periodo siguiente"><Icon name="chevron-right" size={20} /></button>
+      <h3 class="cal__title" data-title aria-live="polite">Calendario</h3>
+    </div>
+    <div class="cal__controls">
+      <label class="cal__date">
+        <span class="sr-only">Ir a una fecha</span>
+        <input type="date" data-date />
+      </label>
+      <div class="cal__views" role="group" aria-label="Vista del calendario">
+        <button type="button" data-view="month" aria-pressed="true">Mes</button>
+        <button type="button" data-view="week" aria-pressed="false">Semana</button>
+        <button type="button" data-view="day" aria-pressed="false">Día</button>
+      </div>
+    </div>
+  </div>
+
+  <label class="cal__switch">
+    <input type="checkbox" data-recurring checked />
+    <span class="cal__switch-ui" aria-hidden="true"></span>
+    Mostrar cultos y reuniones semanales
+  </label>
+
+  <div class="cal__body" data-body>
+    <noscript><p class="empty">Activa JavaScript para usar el calendario interactivo.</p></noscript>
+  </div>
+</div>
+
+<script>
+  type Ev = { id: string; title: string; description?: string; date: string; time?: string; location?: string; recurring?: boolean };
+  type Sch = { id: string; title: string; day: number; time: string; description?: string };
+
+  const DAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+  const DAYS_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  const iso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const parse = (s: string) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const addDays = (d: Date, n: number) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+  const startOfWeek = (d: Date) => addDays(d, -d.getDay());
+  const fmtTime = (t?: string) => {
+    if (!t) return '';
+    const [h, m] = t.split(':').map(Number);
+    return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+  };
+  const esc = (s = '') => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+
+  function init(root: HTMLElement) {
+    if (root.dataset.ready) return;
+    root.dataset.ready = '1';
+    const { events, schedules } = JSON.parse(root.dataset.payload || '{}') as { events: Ev[]; schedules: Sch[] };
+    const byDate = new Map<string, Ev[]>();
+    events.forEach((e) => { const list = byDate.get(e.date) ?? []; list.push(e); byDate.set(e.date, list); });
+
+    const body = root.querySelector<HTMLElement>('[data-body]')!;
+    const title = root.querySelector<HTMLElement>('[data-title]')!;
+    const dateInput = root.querySelector<HTMLInputElement>('[data-date]')!;
+    const recurringToggle = root.querySelector<HTMLInputElement>('[data-recurring]')!;
+    const viewBtns = root.querySelectorAll<HTMLButtonElement>('[data-view]');
+
+    let view: 'month' | 'week' | 'day' = 'month';
+    let cursor = new Date(); cursor.setHours(0, 0, 0, 0);
+    const today = iso(new Date());
+
+    const eventsOn = (d: Date): Ev[] => {
+      const list = [...(byDate.get(iso(d)) ?? [])];
+      if (recurringToggle.checked) {
+        schedules.filter((s) => s.day === d.getDay()).forEach((s) =>
+          list.push({ id: `${s.id}-${iso(d)}`, title: s.title, description: s.description, date: iso(d), time: s.time, recurring: true }),
+        );
+      }
+      return list.sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''));
+    };
+
+    const eventItem = (e: Ev) => `
+      <li class="cal-ev ${e.recurring ? 'is-recurring' : ''}">
+        <span class="cal-ev__time">${e.time ? fmtTime(e.time) : 'Todo el día'}</span>
+        <div>
+          <strong>${esc(e.title)}</strong>
+          ${e.description ? `<p>${esc(e.description)}</p>` : ''}
+          ${e.location ? `<p class="cal-ev__loc">📍 ${esc(e.location)}</p>` : ''}
+          ${e.recurring ? '<span class="cal-ev__tag">Semanal</span>' : ''}
+        </div>
+      </li>`;
+
+    const emptyMsg = '<p class="cal-empty">Aún no se han agregado eventos para este período.</p>';
+
+    function renderMonth() {
+      const first = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+      const start = startOfWeek(first);
+      title.textContent = `${cap(MONTHS[cursor.getMonth()])} ${cursor.getFullYear()}`;
+      let html = '<div class="cal-month">';
+      html += '<div class="cal-month__head">' + DAYS_SHORT.map((d, i) => `<span aria-hidden="true">${d}</span>`).join('') + '</div>';
+      html += '<div class="cal-month__grid">';
+      let any = false;
+      for (let i = 0; i < 42; i++) {
+        const d = addDays(start, i);
+        const list = eventsOn(d);
+        const special = list.filter((e) => !e.recurring);
+        if (special.length) any = true;
+        const out = d.getMonth() !== cursor.getMonth();
+        const label = `${d.getDate()} de ${MONTHS[d.getMonth()]}: ${list.length ? list.length + ' actividad(es)' : 'sin actividades'}`;
+        html += `<button type="button" class="cal-day ${out ? 'is-out' : ''} ${iso(d) === today ? 'is-today' : ''}" data-goto="${iso(d)}" aria-label="${label}">
+          <span class="cal-day__num">${d.getDate()}</span>
+          <span class="cal-day__events">
+            ${list.slice(0, 3).map((e) => `<span class="cal-chip ${e.recurring ? 'is-recurring' : ''}">${esc(e.title)}</span>`).join('')}
+            ${list.length > 3 ? `<span class="cal-more">+${list.length - 3}</span>` : ''}
+          </span>
+          ${list.length ? `<span class="cal-dots">${list.slice(0, 4).map((e) => `<i class="${e.recurring ? 'is-recurring' : ''}"></i>`).join('')}</span>` : ''}
+        </button>`;
+      }
+      html += '</div></div>';
+      if (!any) html += emptyMsg.replace('</p>', recurringToggle.checked ? ' Se muestran los cultos semanales regulares.</p>' : '</p>');
+      body.innerHTML = html;
+    }
+
+    function renderWeek() {
+      const start = startOfWeek(cursor);
+      const end = addDays(start, 6);
+      title.textContent = start.getMonth() === end.getMonth()
+        ? `${start.getDate()} – ${end.getDate()} de ${MONTHS[end.getMonth()]} ${end.getFullYear()}`
+        : `${start.getDate()} ${MONTHS[start.getMonth()].slice(0, 3)} – ${end.getDate()} ${MONTHS[end.getMonth()].slice(0, 3)} ${end.getFullYear()}`;
+      let html = '<div class="cal-week">';
+      let total = 0;
+      for (let i = 0; i < 7; i++) {
+        const d = addDays(start, i);
+        const list = eventsOn(d);
+        total += list.length;
+        html += `<section class="cal-week__day ${iso(d) === today ? 'is-today' : ''}">
+          <button type="button" class="cal-week__head" data-goto="${iso(d)}">
+            <span>${DAYS_SHORT[d.getDay()]}</span><strong>${d.getDate()}</strong>
+          </button>
+          ${list.length ? `<ul>${list.map(eventItem).join('')}</ul>` : '<p class="cal-week__none">—</p>'}
+        </section>`;
+      }
+      html += '</div>';
+      if (!total) html += emptyMsg;
+      body.innerHTML = html;
+    }
+
+    function renderDay() {
+      title.textContent = `${DAYS[cursor.getDay()]}, ${cursor.getDate()} de ${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`;
+      const list = eventsOn(cursor);
+      body.innerHTML = list.length ? `<ul class="cal-daylist">${list.map(eventItem).join('')}</ul>` : emptyMsg;
+    }
+
+    function render() {
+      viewBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.view === view)));
+      dateInput.value = iso(cursor);
+      root.dataset.view = view;
+      if (view === 'month') renderMonth();
+      else if (view === 'week') renderWeek();
+      else renderDay();
+    }
+
+    function shift(dir: number) {
+      if (view === 'month') cursor = new Date(cursor.getFullYear(), cursor.getMonth() + dir, 1);
+      else cursor = addDays(cursor, dir * (view === 'week' ? 7 : 1));
+      render();
+    }
+
+    root.querySelector('[data-prev]')!.addEventListener('click', () => shift(-1));
+    root.querySelector('[data-next]')!.addEventListener('click', () => shift(1));
+    root.querySelector('[data-today]')!.addEventListener('click', () => { cursor = parse(today); render(); });
+    viewBtns.forEach((b) => b.addEventListener('click', () => { view = b.dataset.view as typeof view; render(); }));
+    dateInput.addEventListener('change', () => { if (dateInput.value) { cursor = parse(dateInput.value); view = 'day'; render(); } });
+    recurringToggle.addEventListener('change', render);
+    body.addEventListener('click', (e) => {
+      const target = (e.target as HTMLElement).closest<HTMLElement>('[data-goto]');
+      if (target) { cursor = parse(target.dataset.goto!); view = 'day'; render(); }
+    });
+
+    render();
+  }
+
+  document.addEventListener('astro:page-load', () => {
+    document.querySelectorAll<HTMLElement>('[data-calendar]').forEach(init);
+  });
+</script>
+
+<style>
+  .cal {
+    background: var(--surface-2); border: 1px solid var(--line);
+    border-radius: var(--radius-lg); padding: clamp(16px, 3vw, 28px);
+  }
+  .cal__toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; align-items: center; }
+  .cal__nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .cal__title { margin: 0 0 0 8px; font-size: clamp(1.15rem, 2.4vw, 1.5rem); }
+  .cal__icon-btn {
+    width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--surface-3); border: 1px solid var(--line); color: var(--white); cursor: pointer;
+  }
+  .cal__icon-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .cal__controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .cal__date input {
+    height: 40px; padding: 0 12px; border-radius: 10px; color-scheme: dark;
+    background: var(--surface-3); border: 1px solid var(--line); color: var(--white); font: inherit; font-size: 0.9rem;
+  }
+  .cal__views { display: inline-flex; background: var(--surface-3); border-radius: 999px; padding: 4px; border: 1px solid var(--line); }
+  .cal__views button {
+    border: 0; background: none; color: var(--muted); font: 700 0.85rem var(--font-body);
+    padding: 8px 16px; border-radius: 999px; cursor: pointer; min-height: 32px;
+  }
+  .cal__views button[aria-pressed='true'] { background: var(--gold); color: #120d02; }
+  .cal__switch {
+    display: inline-flex; align-items: center; gap: 10px; margin: 18px 0 14px;
+    font-size: 0.9rem; color: var(--muted); cursor: pointer;
+  }
+  .cal__switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .cal__switch-ui {
+    width: 38px; height: 22px; border-radius: 999px; background: var(--surface-3);
+    border: 1px solid var(--line); position: relative; transition: background 0.2s;
+  }
+  .cal__switch-ui::after {
+    content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--muted); transition: transform 0.25s var(--ease), background 0.2s;
+  }
+  .cal__switch input:checked + .cal__switch-ui { background: var(--gold-soft); border-color: var(--gold); }
+  .cal__switch input:checked + .cal__switch-ui::after { transform: translateX(16px); background: var(--gold); }
+  .cal__switch input:focus-visible + .cal__switch-ui { outline: 2px solid var(--gold-light); outline-offset: 2px; }
+
+  .cal__body { animation: cal-fade 0.35s var(--ease); }
+  @keyframes cal-fade { from { opacity: 0.4; } to { opacity: 1; } }
+
+  .cal :global(.cal-month__head),
+  .cal :global(.cal-month__grid) { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .cal :global(.cal-month__head span) {
+    text-align: center; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted); padding: 6px 0;
+  }
+  .cal :global(.cal-day) {
+    min-height: 96px; padding: 8px; text-align: left; cursor: pointer;
+    display: flex; flex-direction: column; gap: 4px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    color: var(--text); font: inherit; transition: border-color 0.2s, background 0.2s;
+  }
+  .cal :global(.cal-day:hover) { border-color: var(--line-gold); }
+  .cal :global(.cal-day.is-out) { opacity: 0.38; }
+  .cal :global(.cal-day.is-today) { border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
+  .cal :global(.cal-day.is-today .cal-day__num) { background: var(--gold); color: #120d02; }
+  .cal :global(.cal-day__num) {
+    width: 28px; height: 28px; display: grid; place-items: center; border-radius: 50%;
+    font-weight: 700; font-size: 0.9rem;
+  }
+  .cal :global(.cal-day__events) { display: grid; gap: 3px; min-width: 0; }
+  .cal :global(.cal-chip) {
+    font-size: 0.72rem; line-height: 1.3; padding: 2px 6px; border-radius: 5px;
+    background: var(--gold); color: #120d02; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .cal :global(.cal-chip.is-recurring) { background: var(--gold-soft); color: var(--gold-light); font-weight: 600; }
+  .cal :global(.cal-more) { font-size: 0.72rem; color: var(--muted); }
+  .cal :global(.cal-dots) { display: none; gap: 3px; }
+  .cal :global(.cal-dots i) { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+  .cal :global(.cal-dots i.is-recurring) { background: rgba(227, 169, 43, 0.45); }
+
+  .cal :global(.cal-empty) {
+    margin: 18px 0 0; padding: 16px 18px; border-radius: 12px; text-align: center;
+    border: 1px dashed var(--line-gold); color: var(--muted); background: var(--gold-soft);
+  }
+
+  .cal :global(.cal-week) { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+  .cal :global(.cal-week__day) {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px; min-height: 180px;
+  }
+  .cal :global(.cal-week__day.is-today) { border-color: var(--gold); }
+  .cal :global(.cal-week__head) {
+    display: flex; flex-direction: column; align-items: center; width: 100%;
+    background: none; border: 0; color: var(--muted); cursor: pointer; font: inherit; padding: 4px 0 10px;
+    border-bottom: 1px solid var(--line); margin-bottom: 8px;
+  }
+  .cal :global(.cal-week__head strong) { font-family: var(--font-display); font-size: 1.5rem; color: var(--white); }
+  .cal :global(.cal-week__day ul), .cal :global(.cal-daylist) { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .cal :global(.cal-week__none) { text-align: center; color: var(--muted); margin: 0; }
+  .cal :global(.cal-week .cal-ev) { grid-template-columns: 1fr; gap: 2px; padding: 8px; }
+  .cal :global(.cal-week .cal-ev p) { display: none; }
+
+  .cal :global(.cal-ev) {
+    display: grid; grid-template-columns: 110px 1fr; gap: 14px; padding: 14px 16px;
+    border-radius: 10px; background: var(--surface-3); border-left: 3px solid var(--gold);
+  }
+  .cal :global(.cal-ev.is-recurring) { border-left-color: rgba(227, 169, 43, 0.45); }
+  .cal :global(.cal-ev__time) { color: var(--gold); font-weight: 700; font-size: 0.85rem; }
+  .cal :global(.cal-ev strong) { color: var(--white); font-size: 0.92rem; line-height: 1.3; display: block; }
+  .cal :global(.cal-ev p) { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
+  .cal :global(.cal-ev__tag) {
+    display: inline-block; margin-top: 6px; font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--gold-light); background: var(--gold-soft); padding: 2px 8px; border-radius: 999px;
+  }
+
+  @media (max-width: 760px) {
+    .cal :global(.cal-day) { min-height: 56px; padding: 6px; align-items: center; }
+    .cal :global(.cal-day__events) { display: none; }
+    .cal :global(.cal-dots) { display: flex; }
+    .cal :global(.cal-week) { grid-template-columns: 1fr; }
+    .cal :global(.cal-week__day) { min-height: 0; display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: start; }
+    .cal :global(.cal-week__head) { border-bottom: 0; border-right: 1px solid var(--line); margin: 0; padding: 0 8px 0 0; }
+    .cal :global(.cal-week__none) { text-align: left; align-self: center; }
+    .cal :global(.cal-ev) { grid-template-columns: 1fr; gap: 4px; }
+    .cal__title { width: 100%; margin: 8px 0 0; order: 5; }
+  }
+</style>

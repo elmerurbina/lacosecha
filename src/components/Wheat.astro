@@ -1,0 +1,24 @@
+---
+/** Espiga decorativa (referencia al logotipo). Se usa en placeholders y en el logo de respaldo. */
+interface Props { class?: string; title?: string }
+const { class: className, title } = Astro.props;
+const rows = [16, 25, 34, 43];
+---
+<svg
+  class={className}
+  viewBox="0 0 64 64"
+  fill="currentColor"
+  role={title ? 'img' : undefined}
+  aria-hidden={title ? undefined : 'true'}
+  aria-label={title}
+>
+  <path d="M32 62V12" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" fill="none" />
+  <ellipse cx="32" cy="9" rx="3.6" ry="7" />
+  {rows.map((y) => (
+    <>
+      <ellipse cx="26" cy={y} rx="3.8" ry="7.4" transform={`rotate(-32 26 ${y})`} />
+      <ellipse cx="38" cy={y} rx="3.8" ry="7.4" transform={`rotate(32 38 ${y})`} />
+    </>
+  ))}
+  <path d="M32 54c-6-1-11-5-13-11 6 1 11 5 13 11zM32 54c6-1 11-5 13-11-6 1-11 5-13 11z" opacity=".7" />
+</svg>

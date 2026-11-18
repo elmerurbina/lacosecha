@@ -1,0 +1,59 @@
+---
+import Icon from './Icon.astro';
+import type { Schedule } from '../lib/types';
+import { DAY_NAMES, formatTime } from '../lib/utils';
+
+interface Props { items: Schedule[]; note?: string }
+const { items, note } = Astro.props;
+// Ordenar empezando por domingo (día principal de culto)
+const sorted = [...items].sort((a, b) => a.day - b.day || a.time.localeCompare(b.time));
+---
+<ul class="schedule">
+  {sorted.map((s, i) => (
+    <li class:list={['schedule__item', { 'is-featured': s.featured }]} data-reveal style={`--delay: ${i * 70}ms`}>
+      <div class="schedule__day">
+        <span>{DAY_NAMES[s.day]}</span>
+        <time datetime={s.time}><Icon name="clock" size={16} /> {formatTime(s.time)}</time>
+      </div>
+      <div class="schedule__info">
+        <h3>{s.title}</h3>
+        {s.description && <p>{s.description}</p>}
+      </div>
+    </li>
+  ))}
+</ul>
+{note && (
+  <p class="schedule__note" data-reveal><Icon name="hands" size={18} /> {note}</p>
+)}
+
+<style>
+  .schedule { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .schedule__item {
+    display: grid; grid-template-columns: 170px 1fr; gap: 20px; align-items: center;
+    padding: 20px 24px; border-radius: var(--radius);
+    background: var(--surface-2); border: 1px solid var(--line);
+    transition: border-color 0.3s, background 0.3s;
+  }
+  .schedule__item:hover { border-color: var(--line-gold); }
+  .schedule__item.is-featured {
+    background: linear-gradient(110deg, rgba(227, 169, 43, 0.16), var(--surface-2) 60%);
+    border-color: var(--line-gold);
+  }
+  .schedule__day span {
+    display: block; font-family: var(--font-display); font-size: 1.35rem; color: var(--white);
+  }
+  .schedule__day time {
+    display: inline-flex; align-items: center; gap: 6px;
+    color: var(--gold); font-weight: 700; font-size: 0.95rem;
+  }
+  .schedule__info h3 { font-family: var(--font-body); font-size: 1.05rem; font-weight: 700; margin: 0 0 2px; }
+  .schedule__info p { margin: 0; color: var(--muted); font-size: 0.95rem; }
+  .schedule__note {
+    display: flex; align-items: center; gap: 10px; margin-top: 18px;
+    color: var(--muted); font-size: 0.95rem;
+  }
+  .schedule__note :global(svg) { color: var(--gold); flex: none; }
+  @media (max-width: 560px) {
+    .schedule__item { grid-template-columns: 1fr; gap: 6px; padding: 18px; }
+  }
+</style>

@@ -1,0 +1,79 @@
+---
+/**
+ * Imagen con placeholder automático.
+ * - Si no se pasa `src`, se muestra el placeholder.
+ * - Si la imagen no carga (archivo inexistente, error de red), se elimina el <img>
+ *   y queda visible el placeholder que está debajo. No requiere JavaScript adicional.
+ */
+import Wheat from './Wheat.astro';
+
+interface Props {
+  src?: string | null;
+  alt: string;
+  /** Texto del placeholder; por defecto usa `alt`. */
+  label?: string;
+  ratio?: string;
+  class?: string;
+  eager?: boolean;
+  /** "card" muestra ícono + texto; "plain" solo la textura (útil en fondos). */
+  variant?: 'card' | 'plain';
+}
+
+const { src, alt, label, ratio = '4 / 3', class: className, eager = false, variant = 'card' } = Astro.props;
+---
+<div class:list={['smart-img', className]} style={`--ratio: ${ratio}`}>
+  <div class:list={['smart-img__ph', `smart-img__ph--${variant}`]} aria-hidden={src ? 'true' : undefined} role={src ? undefined : 'img'} aria-label={src ? undefined : alt}>
+    {variant === 'card' && (
+      <>
+        <Wheat class="smart-img__icon" />
+        <span class="smart-img__label">{label ?? alt}</span>
+        <span class="smart-img__hint">Imagen próximamente</span>
+      </>
+    )}
+  </div>
+  {src && (
+    <img
+      src={src}
+      alt={alt}
+      loading={eager ? 'eager' : 'lazy'}
+      fetchpriority={eager ? 'high' : undefined}
+      decoding="async"
+      onerror="this.remove()"
+    />
+  )}
+</div>
+
+<style>
+  .smart-img {
+    position: relative;
+    aspect-ratio: var(--ratio);
+    overflow: hidden;
+    background: var(--surface-3);
+    isolation: isolate;
+  }
+  .smart-img img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+    z-index: 1;
+  }
+  .smart-img__ph {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; padding: 16px; text-align: center;
+    color: var(--gold);
+    background:
+      radial-gradient(circle at 30% 20%, rgba(227, 169, 43, 0.16), transparent 55%),
+      radial-gradient(circle at 80% 90%, rgba(227, 169, 43, 0.09), transparent 50%),
+      repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 14px),
+      linear-gradient(160deg, #1f1c17, #0f0e0c);
+  }
+  .smart-img__ph :global(.smart-img__icon) { width: clamp(36px, 18%, 64px); height: auto; opacity: 0.85; }
+  .smart-img__label {
+    font-family: var(--font-display); font-size: 1.05rem; color: var(--white);
+    line-height: 1.25; max-width: 22ch;
+  }
+  .smart-img__hint {
+    font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted);
+  }
+</style>

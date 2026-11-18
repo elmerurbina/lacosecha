@@ -1,0 +1,84 @@
+---
+import Logo from './Logo.astro';
+import Icon from './Icon.astro';
+import { siteInfo } from '../data/seed';
+import { links } from '../lib/utils';
+import { nav } from '../data/nav';
+
+const l = links(siteInfo);
+const year = new Date().getFullYear();
+---
+<footer class="footer">
+  <div class="container footer__grid">
+    <div class="footer__brand">
+      <Logo size={56} />
+      <p class="footer__motto">“{siteInfo.motto}”<span>{siteInfo.mottoRef}</span></p>
+      <p class="muted small">{siteInfo.denomination} · {siteInfo.city}</p>
+    </div>
+
+    <nav aria-label="Enlaces del pie de página">
+      <h2 class="footer__title">Explorar</h2>
+      <ul class="footer__list">
+        {nav.map((n) => <li><a href={n.href}>{n.label}</a></li>)}
+      </ul>
+    </nav>
+
+    <div>
+      <h2 class="footer__title">Contacto</h2>
+      <ul class="footer__list footer__contact">
+        <li><a href={l.whatsapp} target="_blank" rel="noopener" data-track="whatsapp"><Icon name="whatsapp" size={18} /> WhatsApp</a></li>
+        <li><a href={l.phone} data-track="phone"><Icon name="phone" size={18} /> {siteInfo.phone}</a></li>
+        <li><a href={l.email} data-track="email"><Icon name="mail" size={18} /> Escríbenos un correo</a></li>
+        <li><a href={l.maps} target="_blank" rel="noopener" data-track="maps"><Icon name="pin" size={18} /> Cómo llegar</a></li>
+      </ul>
+      <div class="footer__social">
+        <a href={siteInfo.social.facebook} target="_blank" rel="noopener" aria-label="Facebook" data-track="facebook"><Icon name="facebook" size={20} /></a>
+        <a href={siteInfo.social.instagram} target="_blank" rel="noopener" aria-label="Instagram" data-track="instagram"><Icon name="instagram" size={20} /></a>
+        <a href={siteInfo.social.tiktok} target="_blank" rel="noopener" aria-label="TikTok" data-track="tiktok"><Icon name="tiktok" size={20} /></a>
+      </div>
+    </div>
+  </div>
+  <div class="container footer__bottom">
+    <p>© {year} {siteInfo.name}. Todos los derechos reservados.</p>
+    <a href="/privacidad">Aviso de privacidad</a>
+  </div>
+</footer>
+
+<style>
+  .footer {
+    background: #070707; border-top: 1px solid var(--line-gold);
+    padding-top: 64px; font-size: 0.95rem;
+  }
+  .footer__grid { display: grid; gap: 40px; }
+  @media (min-width: 800px) { .footer__grid { grid-template-columns: 1.5fr 1fr 1fr; } }
+  .footer__motto {
+    font-family: var(--font-display); font-style: italic; font-size: 1.15rem;
+    color: var(--white); margin: 20px 0 8px; max-width: 34ch;
+  }
+  .footer__motto span {
+    display: block; font-family: var(--font-body); font-style: normal;
+    font-size: 0.8rem; color: var(--gold); margin-top: 6px; letter-spacing: 0.1em;
+  }
+  .small { font-size: 0.88rem; }
+  .footer__title {
+    font-family: var(--font-body); font-size: 0.78rem; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 16px;
+  }
+  .footer__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .footer__list a { color: var(--text); text-decoration: none; display: inline-flex; align-items: center; gap: 10px; min-height: 28px; }
+  .footer__list a:hover { color: var(--gold-light); }
+  .footer__contact :global(svg) { color: var(--gold); }
+  .footer__social { display: flex; gap: 10px; margin-top: 20px; }
+  .footer__social a {
+    width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center;
+    border: 1px solid var(--line); color: var(--white); transition: all 0.25s;
+  }
+  .footer__social a:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-2px); }
+  .footer__bottom {
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px;
+    border-top: 1px solid var(--line); margin-top: 48px; padding-block: 24px;
+    color: var(--muted); font-size: 0.85rem;
+  }
+  .footer__bottom p { margin: 0; }
+  .footer__bottom a { color: var(--muted); }
+</style>

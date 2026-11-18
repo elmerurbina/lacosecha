@@ -1,0 +1,149 @@
+---
+import Logo from './Logo.astro';
+import Icon from './Icon.astro';
+import { nav } from '../data/nav';
+
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
+---
+<header class="site-header" data-header>
+  <div class="container site-header__inner">
+    <a href="/" class="site-header__brand" aria-label="Comunidad Evangélica La Cosecha — Inicio">
+      <Logo size={50} />
+    </a>
+
+    <nav class="site-nav" id="site-nav" aria-label="Navegación principal" data-nav>
+      <ul>
+        {nav.map((item) => (
+          <li>
+            <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
+          </li>
+        ))}
+      </ul>
+      <a href="/contacto#oracion" class="btn btn--gold btn--sm site-nav__cta">
+        <Icon name="heart" /> Pide oración
+      </a>
+    </nav>
+
+    <button
+      class="site-header__toggle"
+      type="button"
+      aria-controls="site-nav"
+      aria-expanded="false"
+      aria-label="Abrir menú"
+      data-nav-toggle
+    >
+      <Icon name="menu" class="i-open" />
+      <Icon name="close" class="i-close" />
+    </button>
+  </div>
+</header>
+
+<script>
+  const q = <T extends Element>(s: string) => document.querySelector<T>(s);
+
+  function setOpen(open: boolean) {
+    const header = q<HTMLElement>('[data-header]');
+    const toggle = q<HTMLButtonElement>('[data-nav-toggle]');
+    if (!header || !toggle) return;
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+    header.classList.toggle('is-open', open);
+    document.documentElement.classList.toggle('nav-open', open);
+  }
+
+  function onScroll() {
+    q('[data-header]')?.classList.toggle('is-scrolled', window.scrollY > 24);
+  }
+
+  // Listeners globales: se registran una sola vez.
+  window.addEventListener('scroll', onScroll, { passive: true });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && q('[data-header]')?.classList.contains('is-open')) {
+      setOpen(false);
+      q<HTMLButtonElement>('[data-nav-toggle]')?.focus();
+    }
+  });
+
+  // Listeners por página (el header se reemplaza en cada navegación).
+  document.addEventListener('astro:page-load', () => {
+    setOpen(false);
+    onScroll();
+    const toggle = q<HTMLButtonElement>('[data-nav-toggle]');
+    toggle?.addEventListener('click', () => setOpen(toggle.getAttribute('aria-expanded') !== 'true'));
+    document.querySelectorAll('[data-nav] a').forEach((a) => a.addEventListener('click', () => setOpen(false)));
+  });
+</script>
+
+<style>
+  .site-header {
+    position: fixed; inset: 0 0 auto; z-index: 100;
+    height: var(--header-h);
+    background: linear-gradient(to bottom, rgba(10, 10, 10, 0.85), rgba(10, 10, 10, 0.4));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid transparent;
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .site-header.is-scrolled,
+  .site-header.is-open {
+    background: rgba(10, 10, 10, 0.94);
+    border-bottom-color: var(--line);
+  }
+  .site-header__inner {
+    height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  }
+  .site-header__brand { text-decoration: none; flex: none; }
+
+  .site-nav { display: flex; align-items: center; gap: 22px; }
+  .site-nav ul { list-style: none; display: flex; gap: 4px; margin: 0; padding: 0; }
+  .site-nav ul a {
+    display: block; padding: 8px 12px; border-radius: 999px;
+    color: var(--text); text-decoration: none; font-size: 0.93rem; font-weight: 600;
+    position: relative; transition: color 0.2s;
+  }
+  .site-nav ul a::after {
+    content: ''; position: absolute; left: 12px; right: 12px; bottom: 3px; height: 2px;
+    background: var(--gold); border-radius: 2px;
+    transform: scaleX(0); transition: transform 0.3s var(--ease);
+  }
+  .site-nav ul a:hover { color: var(--gold-light); }
+  .site-nav ul a:hover::after,
+  .site-nav ul a[aria-current='page']::after { transform: scaleX(1); }
+  .site-nav ul a[aria-current='page'] { color: var(--gold-light); }
+
+  .site-header__toggle {
+    display: none; width: 46px; height: 46px; border-radius: 12px;
+    background: var(--surface-2); color: var(--white); border: 1px solid var(--line);
+    align-items: center; justify-content: center; cursor: pointer;
+  }
+  .site-header__toggle :global(.i-close) { display: none; }
+  .is-open .site-header__toggle :global(.i-open) { display: none; }
+  .is-open .site-header__toggle :global(.i-close) { display: block; }
+
+  @media (max-width: 1100px) {
+    .site-header__toggle { display: inline-flex; }
+    .site-nav {
+      /* absolute: el backdrop-filter del header crea el bloque contenedor */
+      position: absolute; top: 100%; left: 0; right: 0;
+      height: calc(100dvh - var(--header-h));
+      flex-direction: column; align-items: stretch; gap: 24px;
+      padding: 24px 20px 40px; overflow-y: auto;
+      background: var(--black);
+      opacity: 0; visibility: hidden; transform: translateY(-12px);
+      transition: opacity 0.3s var(--ease), transform 0.3s var(--ease), visibility 0.3s;
+    }
+    .is-open .site-nav { opacity: 1; visibility: visible; transform: none; }
+    .site-nav ul { flex-direction: column; gap: 0; }
+    .site-nav ul a {
+      font-family: var(--font-display); font-size: 1.5rem; font-weight: 500;
+      padding: 14px 4px; border-radius: 0; border-bottom: 1px solid var(--line);
+    }
+    .site-nav ul a::after { display: none; }
+    .site-nav__cta { align-self: flex-start; }
+  }
+  @media (max-width: 420px) {
+    .site-header__brand :global(.logo__small) { display: none; }
+  }
+  :global(html.nav-open) { overflow: hidden; }
+</style>

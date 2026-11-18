@@ -1,11 +1,214 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
+import Hero from '../components/Hero.astro';
+import Icon from '../components/Icon.astro';
+import SmartImage from '../components/SmartImage.astro';
+import SectionHeading from '../components/SectionHeading.astro';
+import ScheduleList from '../components/ScheduleList.astro';
+import MinistryCard from '../components/MinistryCard.astro';
+import AnnouncementList from '../components/AnnouncementList.astro';
+import Gallery from '../components/Gallery.astro';
+import {
+  getSiteInfo, getSchedules, getMinistries, getAnnouncements, getGallery, getEvents, prayerNote,
+} from '../lib/content';
+import { formatDate, formatTime, links } from '../lib/utils';
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+const site = await getSiteInfo();
+const [schedules, ministries, announcements, gallery, events] = await Promise.all([
+  getSchedules(), getMinistries(), getAnnouncements(), getGallery(), getEvents(),
+]);
+const today = new Date().toISOString().slice(0, 10);
+const upcoming = events.filter((e) => e.date >= today).slice(0, 3);
+const l = links(site);
+
+const quick = [
+  { href: '/horarios', icon: 'clock', title: 'Horarios', text: 'Días y horas de culto' },
+  { href: '/ministerios', icon: 'users', title: 'Ministerios', text: 'Encuentra tu lugar' },
+  { href: '/eventos', icon: 'calendar', title: 'Eventos', text: 'Calendario y anuncios' },
+  { href: '/predicas', icon: 'play', title: 'Prédicas', text: 'Mensajes de la Palabra' },
+  { href: '/contacto#oracion', icon: 'heart', title: 'Oración', text: 'Envíanos tu petición' },
+  { href: '/contacto', icon: 'pin', title: 'Ubicación', text: 'Cómo llegar' },
+];
 ---
-
 <Layout>
-	<Welcome />
+  <Hero site={site} />
+
+  <!-- Accesos rápidos -->
+  <section class="quick" aria-label="Accesos rápidos">
+    <div class="container">
+      <ul class="quick__grid">
+        {quick.map((q, i) => (
+          <li data-reveal style={`--delay: ${i * 60}ms`}>
+            <a href={q.href} class="quick__item">
+              <span class="quick__icon"><Icon name={q.icon} /></span>
+              <span><strong>{q.title}</strong><small>{q.text}</small></span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <!-- Bienvenida -->
+  <section class="section" id="bienvenida">
+    <div class="container welcome">
+      <div class="welcome__media" data-reveal="left">
+        <SmartImage src="/images/bienvenida.jpg" alt="Congregación de La Cosecha reunida en culto" label="Nuestra congregación" ratio="4 / 5" />
+        <div class="welcome__badge">
+          <span>Desde</span>
+          <strong>2025</strong>
+        </div>
+      </div>
+      <div data-reveal="right">
+        <p class="eyebrow">Bienvenido a casa</p>
+        <h2>Una iglesia para toda la familia</h2>
+        <p class="lead">{site.description}</p>
+        <p class="muted">Pastoreada por el <strong class="gold">Pastor {site.pastor}</strong> y la <strong class="gold">Pastora {site.associatePastor}</strong>, bajo la cobertura de las {site.denomination}.</p>
+        <a href="/quienes-somos" class="btn btn--gold">Conócenos <Icon name="arrow" /></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Horarios -->
+  <section class="section section--alt">
+    <div class="container two-col">
+      <div>
+        <SectionHeading eyebrow="Te esperamos" title="Horarios de culto y reuniones" lead="Ven tal como eres. Hay un lugar para ti en cada una de nuestras reuniones." />
+        <div class="two-col__actions" data-reveal>
+          <a href="/horarios" class="btn btn--gold">Ver horarios y mapa</a>
+          <a href={l.maps} class="btn btn--ghost" target="_blank" rel="noopener" data-track="maps"><Icon name="navigation" /> Cómo llegar</a>
+        </div>
+      </div>
+      <ScheduleList items={schedules} note={prayerNote} />
+    </div>
+  </section>
+
+  <!-- Próximos eventos -->
+  <section class="section">
+    <div class="container">
+      <SectionHeading eyebrow="Agenda" title="Próximos eventos" center />
+      {upcoming.length > 0 ? (
+        <div class="grid grid--3">
+          {upcoming.map((e, i) => (
+            <article class="card event" data-reveal style={`--delay: ${i * 80}ms`}>
+              <SmartImage src={e.image} alt={e.title} ratio="16 / 9" />
+              <div class="event__body">
+                <p class="event__date"><Icon name="calendar" size={16} /> {formatDate(e.date)}{e.time && ` · ${formatTime(e.time)}`}</p>
+                <h3>{e.title}</h3>
+                {e.description && <p class="muted">{e.description}</p>}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div class="empty" data-reveal>
+          <p>Aún no se han agregado eventos próximos.</p>
+          <p class="muted">Nuestras actividades se anuncian en redes sociales.</p>
+          <div class="social-inline">
+            <a href={site.social.facebook} target="_blank" rel="noopener" class="btn btn--sm btn--ghost" data-track="facebook"><Icon name="facebook" /> Facebook</a>
+            <a href={site.social.instagram} target="_blank" rel="noopener" class="btn btn--sm btn--ghost" data-track="instagram"><Icon name="instagram" /> Instagram</a>
+            <a href={site.social.tiktok} target="_blank" rel="noopener" class="btn btn--sm btn--ghost" data-track="tiktok"><Icon name="tiktok" /> TikTok</a>
+          </div>
+        </div>
+      )}
+      <p class="center"><a href="/eventos" class="btn btn--ghost">Ver calendario completo <Icon name="arrow" /></a></p>
+    </div>
+  </section>
+
+  <!-- Ministerios -->
+  <section class="section section--alt">
+    <div class="container">
+      <SectionHeading eyebrow="Ministerios" title="Sirviendo con amor" lead="Cada ministerio es una oportunidad para crecer, servir y llevar esperanza." center />
+      <div class="grid grid--3">
+        {ministries.slice(0, 3).map((m, i) => <MinistryCard ministry={m} index={i} />)}
+      </div>
+      <p class="center"><a href="/ministerios" class="btn btn--gold">Ver todos los ministerios <Icon name="arrow" /></a></p>
+    </div>
+  </section>
+
+  <!-- Anuncios -->
+  <section class="section">
+    <div class="container">
+      <SectionHeading eyebrow="Anuncios" title="Lo que está pasando" />
+      <AnnouncementList items={announcements} limit={2} />
+    </div>
+  </section>
+
+  <!-- Galería -->
+  <section class="section section--alt">
+    <div class="container">
+      <SectionHeading eyebrow="Galería" title="Momentos de nuestra comunidad" center />
+      <Gallery items={gallery} initial={6} />
+    </div>
+  </section>
+
+  <!-- CTA oración -->
+  <section class="section cta-band">
+    <div class="container cta-band__inner" data-reveal>
+      <Icon name="hands" size={44} class="gold" />
+      <h2>¿Podemos orar por ti?</h2>
+      <p class="lead">Comparte tu petición con nuestro equipo pastoral. Es confidencial.</p>
+      <div class="cta-band__actions">
+        <a href="/contacto#oracion" class="btn btn--gold"><Icon name="heart" /> Enviar petición de oración</a>
+        <a href={l.whatsapp} class="btn btn--ghost" target="_blank" rel="noopener" data-track="whatsapp"><Icon name="whatsapp" /> Escríbenos</a>
+      </div>
+    </div>
+  </section>
 </Layout>
+
+<style>
+  .quick { position: relative; z-index: 2; margin-top: -64px; }
+  .quick__grid {
+    list-style: none; margin: 0; padding: 0;
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  }
+  @media (min-width: 720px) { .quick__grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 1100px) { .quick__grid { grid-template-columns: repeat(6, 1fr); } }
+  .quick__item {
+    height: 100%; display: flex; align-items: center; gap: 12px; padding: 18px 16px;
+    background: rgba(27, 26, 24, 0.92); backdrop-filter: blur(8px);
+    border: 1px solid var(--line); border-radius: var(--radius);
+    color: var(--text); text-decoration: none;
+    transition: border-color 0.25s, transform 0.3s var(--ease);
+  }
+  .quick__item:hover { border-color: var(--gold); transform: translateY(-4px); color: var(--text); }
+  .quick__icon {
+    width: 42px; height: 42px; flex: none; border-radius: 12px; display: grid; place-items: center;
+    background: var(--gold-soft); color: var(--gold);
+  }
+  .quick__item strong { display: block; color: var(--white); font-size: 0.98rem; }
+  .quick__item small { display: block; color: var(--muted); font-size: 0.8rem; line-height: 1.3; }
+
+  .welcome { display: grid; gap: 48px; align-items: center; }
+  @media (min-width: 900px) { .welcome { grid-template-columns: 0.9fr 1.1fr; gap: 72px; } }
+  .welcome__media { position: relative; }
+  .welcome__media :global(.smart-img) { border-radius: var(--radius-lg); border: 1px solid var(--line); }
+  .welcome__badge {
+    position: absolute; right: -12px; bottom: 28px; z-index: 2;
+    background: var(--gold); color: #120d02; border-radius: 18px; padding: 16px 22px; text-align: center;
+    box-shadow: var(--shadow);
+  }
+  .welcome__badge span { display: block; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; }
+  .welcome__badge strong { font-family: var(--font-display); font-size: 2rem; line-height: 1; }
+  @media (max-width: 560px) { .welcome__badge { right: 12px; } }
+
+  .two-col { display: grid; gap: 40px; align-items: start; }
+  @media (min-width: 960px) { .two-col { grid-template-columns: 0.85fr 1.15fr; gap: 64px; } }
+  .two-col__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+
+  .event__body { padding: 20px 22px 24px; }
+  .event__date { display: flex; align-items: center; gap: 8px; color: var(--gold); font-weight: 700; font-size: 0.88rem; margin-bottom: 8px; }
+
+  .social-inline { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 8px; }
+  .center { text-align: center; margin-top: 40px; margin-bottom: 0; }
+
+  .cta-band {
+    background:
+      radial-gradient(ellipse at 50% 120%, rgba(227, 169, 43, 0.28), transparent 60%),
+      var(--black);
+    border-top: 1px solid var(--line);
+  }
+  .cta-band__inner { text-align: center; display: flex; flex-direction: column; align-items: center; }
+  .cta-band__inner :global(svg.gold) { margin-bottom: 16px; }
+  .cta-band__actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 8px; }
+</style>

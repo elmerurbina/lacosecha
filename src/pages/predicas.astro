@@ -1,0 +1,91 @@
+---
+/**
+ * Prédicas (RF-14): 4 destacadas + catálogo completo expandible,
+ * ordenado cronológicamente y agrupado por mes y año.
+ */
+import Layout from '../layouts/Layout.astro';
+import PageHero from '../components/PageHero.astro';
+import SermonCard from '../components/SermonCard.astro';
+import Icon from '../components/Icon.astro';
+import { getSermons, getSiteInfo } from '../lib/content';
+import { MONTH_NAMES } from '../lib/utils';
+
+const site = await getSiteInfo();
+const sermons = (await getSermons()).sort((a, b) => b.date.localeCompare(a.date));
+const featured = sermons.slice(0, 4);
+const placeholders = Math.max(0, 4 - featured.length);
+
+const groups = new Map<string, typeof sermons>();
+for (const s of sermons) {
+  const [y, m] = s.date.split('-');
+  const key = `${MONTH_NAMES[Number(m) - 1]} ${y}`;
+  groups.set(key, [...(groups.get(key) ?? []), s]);
+}
+---
+<Layout title="Prédicas" description="Mensajes y prédicas de la Comunidad Evangélica La Cosecha, organizados por mes y año.">
+  <PageHero eyebrow="Prédicas" title="La Palabra que transforma" lead="Escucha los mensajes compartidos en nuestros cultos y crece en tu fe durante la semana." />
+
+  <section class="section">
+    <div class="container">
+      <h2 class="sr-only">Prédicas destacadas</h2>
+      <div class="grid grid--4">
+        {featured.map((s, i) => <SermonCard sermon={s} index={i} />)}
+        {Array.from({ length: placeholders }).map((_, i) => <SermonCard index={featured.length + i} />)}
+      </div>
+
+      {sermons.length > 4 && (
+        <div class="archive" data-archive>
+          <div class="archive__toggle">
+            <button type="button" class="btn btn--ghost" aria-expanded="false" aria-controls="sermon-archive" data-archive-btn>
+              <span data-label>Ver todas las prédicas</span> <Icon name="chevron-down" size={18} />
+            </button>
+          </div>
+          <div id="sermon-archive" class="archive__list" hidden>
+            {[...groups.entries()].map(([month, list]) => (
+              <section class="archive__group">
+                <h3>{month}</h3>
+                <div class="grid grid--4">
+                  {list.map((s, i) => <SermonCard sermon={s} index={i} />)}
+                </div>
+              </section>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div class="fb-note" data-reveal>
+        <Icon name="facebook" size={28} />
+        <p>También compartimos nuestros mensajes en Facebook.</p>
+        <a href={site.social.facebook} target="_blank" rel="noopener" class="btn btn--gold btn--sm" data-track="facebook">Ir a nuestra página <Icon name="external" /></a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    const btn = document.querySelector<HTMLButtonElement>('[data-archive-btn]');
+    const list = document.getElementById('sermon-archive');
+    if (!btn || !list) return;
+    btn.addEventListener('click', () => {
+      const open = list.hidden;
+      list.hidden = !open;
+      btn.setAttribute('aria-expanded', String(open));
+      btn.querySelector('[data-label]')!.textContent = open ? 'Ocultar catálogo' : 'Ver todas las prédicas';
+      list.querySelectorAll('[data-reveal]').forEach((el) => el.classList.add('is-visible'));
+    });
+  });
+</script>
+
+<style>
+  .archive__toggle { text-align: center; margin-top: 40px; }
+  .archive__group { margin-top: 48px; }
+  .archive__group h3 { padding-bottom: 12px; border-bottom: 1px solid var(--line-gold); margin-bottom: 24px; }
+  .fb-note {
+    margin-top: 56px; padding: 24px 28px; border-radius: var(--radius-lg);
+    display: flex; flex-wrap: wrap; align-items: center; gap: 16px;
+    background: var(--surface-2); border: 1px solid var(--line);
+  }
+  .fb-note :global(svg:first-child) { color: var(--gold); }
+  .fb-note p { margin: 0; flex: 1; min-width: 200px; color: var(--white); }
+</style>

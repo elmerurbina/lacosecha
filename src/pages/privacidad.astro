@@ -1,0 +1,31 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PageHero from '../components/PageHero.astro';
+import { getSiteInfo } from '../lib/content';
+const site = await getSiteInfo();
+---
+<Layout title="Aviso de privacidad" description="Cómo tratamos la información que nos compartes a través de este sitio web.">
+  <PageHero eyebrow="Legal" title="Aviso de privacidad" />
+  <section class="section">
+    <div class="container prose">
+      <!-- TODO: revisar con asesoría legal conforme a la Ley N.º 787 de Protección de Datos Personales de Nicaragua. -->
+      <p>La {site.name} respeta tu privacidad. Este aviso explica qué información recopilamos a través de este sitio y cómo la utilizamos.</p>
+      <h2>Información que recopilamos</h2>
+      <p>Cuando envías una petición de oración puedes proporcionarnos, de forma voluntaria, tu nombre, un medio de contacto y el contenido de tu petición. También registramos estadísticas anónimas de uso (páginas visitadas y clics en botones de contacto) sin datos que te identifiquen.</p>
+      <h2>Finalidad</h2>
+      <p>Las peticiones de oración se utilizan únicamente para que nuestro equipo pastoral y de intercesión ore por ti y, si así lo indicas, se comunique contigo. No compartimos ni vendemos tu información a terceros.</p>
+      <h2>Conservación</h2>
+      <p>Las peticiones de oración se eliminan automáticamente después de tres (3) meses desde su envío.</p>
+      <h2>Acceso y seguridad</h2>
+      <p>Solo el personal administrativo autorizado puede consultar las peticiones, mediante un panel protegido con autenticación. La información se transmite por conexiones cifradas (HTTPS).</p>
+      <h2>Tus derechos</h2>
+      <p>Puedes solicitar la consulta, corrección o eliminación de tu información escribiendo a <a href={`mailto:${site.email}`}>{site.email}</a>.</p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .prose { max-width: 760px; }
+  .prose h2 { font-size: 1.5rem; margin-top: 2em; }
+  .prose p { color: var(--text); }
+</style>
