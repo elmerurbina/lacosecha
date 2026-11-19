@@ -1,0 +1,413 @@
+---
+/**
+ * Vista semanal estilo calendario (RF-05): columnas por día, franjas por hora,
+ * bloques de color por reunión, franja de "todo el día" para la nota de oración
+ * y una línea roja con la hora actual (hora de Nicaragua).
+ * En móviles se muestra como agenda agrupada por día.
+ * Cada reunión abre una ficha (Popover API) con botón «Agregar a Google Calendar».
+ */
+import Icon from './Icon.astro';
+import type { Schedule } from '../lib/types';
+import { DAY_NAMES, MONTH_NAMES, formatTime } from '../lib/utils';
+
+interface Props { items: Schedule[]; note?: string; address?: string }
+const { items, note, address = 'Juigalpa, Chontales, Nicaragua' } = Astro.props;
+
+const TZ = 'America/Managua';
+const SHORT = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+// Paleta por reunión (sobre fondo oscuro): el color acompaña a la reunión, no a su posición en pantalla.
+const PALETTE = ['#e3a92b', '#e07a5f', '#6fbf8e', '#64a6e8', '#b79cf0', '#e58fb6', '#4fc3c7'];
+
+const sorted = [...items].sort((a, b) => a.day - b.day || a.time.localeCompare(b.time));
+const toMin = (t: string) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+const durationOf = (s: Schedule) => (s.featured ? 120 : 90); // duración visual aproximada
+
+// Semana actual en hora de Nicaragua (domingo a sábado).
+const todayISO = new Date().toLocaleDateString('en-CA', { timeZone: TZ });
+const [ty, tm, td] = todayISO.split('-').map(Number);
+const today = new Date(Date.UTC(ty, tm - 1, td));
+const todayDow = today.getUTCDay();
+const week = Array.from({ length: 7 }, (_, i) => {
+  const d = new Date(today);
+  d.setUTCDate(today.getUTCDate() - todayDow + i);
+  return d;
+});
+const fmtRange = () => {
+  const a = week[0], b = week[6];
+  const ma = MONTH_NAMES[a.getUTCMonth()].toLowerCase(), mb = MONTH_NAMES[b.getUTCMonth()].toLowerCase();
+  return a.getUTCMonth() === b.getUTCMonth()
+    ? `${a.getUTCDate()} – ${b.getUTCDate()} de ${mb} de ${b.getUTCFullYear()}`
+    : `${a.getUTCDate()} de ${ma} – ${b.getUTCDate()} de ${mb} de ${b.getUTCFullYear()}`;
+};
+
+// Rango de horas visible: una hora antes de la primera reunión y una después de la última.
+const starts = sorted.map((s) => toMin(s.time));
+const ends = sorted.map((s) => toMin(s.time) + durationOf(s));
+const startHour = sorted.length ? Math.max(0, Math.floor(Math.min(...starts) / 60) - 1) : 16;
+const endHour = sorted.length ? Math.min(24, Math.ceil(Math.max(...ends) / 60) + 1) : 21;
+const hours = Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
+const hourLabel = (h: number) => `${((h + 11) % 12) + 1} ${h >= 12 ? 'PM' : 'AM'}`;
+
+// Próxima fecha de cada reunión, para el enlace de Google Calendar (se repite cada semana).
+const pad = (n: number) => String(n).padStart(2, '0');
+const gcalLink = (s: Schedule) => {
+  const d = new Date(today);
+  let diff = (s.day - todayDow + 7) % 7;
+  const nowMin = toMin(new Date().toLocaleTimeString('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit' }));
+  if (diff === 0 && toMin(s.time) <= nowMin) diff = 7;
+  d.setUTCDate(d.getUTCDate() + diff);
+  const ymd = `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}`;
+  const st = toMin(s.time), en = st + durationOf(s);
+  const t = (m: number) => `${pad(Math.floor(m / 60) % 24)}${pad(m % 60)}00`;
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `${s.title} · La Cosecha`,
+    dates: `${ymd}T${t(st)}/${ymd}T${t(en)}`,
+    ctz: TZ,
+    recur: 'RRULE:FREQ=WEEKLY',
+    details: `${s.description ?? ''}\nComunidad Evangélica La Cosecha`.trim(),
+    location: address,
+  });
+  return `https://calendar.google.com/calendar/render?${params}`;
+};
+
+// Reuniones con su color, posición y columna (si dos se cruzan el mismo día, se ponen lado a lado).
+const events = sorted.map((s, i) => ({
+  ...s,
+  key: `ev-${s.id}`,
+  color: PALETTE[i % PALETTE.length],
+  top: ((toMin(s.time) - startHour * 60) / 60),
+  len: durationOf(s) / 60,
+  lane: 0,
+  lanes: 1,
+}));
+for (let day = 0; day < 7; day++) {
+  const list = events.filter((e) => e.day === day);
+  list.forEach((e, i) => {
+    const overlapping = list.filter((o) => o !== e && o.top < e.top + e.len && e.top < o.top + o.len);
+    e.lanes = overlapping.length + 1;
+    e.lane = list.slice(0, i).filter((o) => overlapping.includes(o)).length;
+  });
+}
+
+// Nota de oración como franja de "todo el día" (lunes a viernes si así lo dice el texto).
+const noteSpan = note && /lunes a viernes/i.test(note) ? { from: 1, to: 5 } : { from: 0, to: 6 };
+---
+<div class="wcal" data-wcal data-start={startHour} data-end={endHour} data-today={todayDow} data-reveal>
+  <!-- Barra superior -->
+  <div class="wcal__bar">
+    <div class="wcal__title">
+      <span class="wcal__logo" aria-hidden="true">
+        <span class="wcal__logo-top"></span>
+        <span class="wcal__logo-day">{td}</span>
+      </span>
+      <div>
+        <p class="wcal__month">{MONTH_NAMES[tm - 1]} {ty}</p>
+        <p class="wcal__range">Semana del {fmtRange()}</p>
+      </div>
+    </div>
+    <div class="wcal__chips">
+      <span class="wcal__chip wcal__chip--today"><span class="wcal__dot"></span> Hoy · {DAY_NAMES[todayDow]}</span>
+      <span class="wcal__chip"><Icon name="clock" size={15} /> Hora de Nicaragua</span>
+    </div>
+  </div>
+
+  <!-- Vista semanal (escritorio) -->
+  <div class="wcal__week" style={`--rows: ${hours.length}`}>
+    <div class="wcal__head">
+      <div class="wcal__gutter-head"><span>GMT-6</span></div>
+      {week.map((d, i) => (
+        <div class:list={['wcal__dayhead', { 'is-today': i === todayDow }]}>
+          <span class="wcal__dow">{SHORT[i]}</span>
+          <span class="wcal__num">{d.getUTCDate()}</span>
+        </div>
+      ))}
+    </div>
+
+    {note && (
+      <div class="wcal__allday">
+        <div class="wcal__gutter-head"><span>Todo el día</span></div>
+        <div class="wcal__allday-track">
+          <div class="wcal__allday-ev" style={`grid-column: ${noteSpan.from + 1} / ${noteSpan.to + 2}`}>
+            <Icon name="hands" size={15} /> {note}
+          </div>
+        </div>
+      </div>
+    )}
+
+    <div class="wcal__body">
+      <div class="wcal__gutter">
+        {hours.map((h) => <span class="wcal__hour">{hourLabel(h)}</span>)}
+      </div>
+      <div class="wcal__grid">
+        {week.map((_, day) => (
+          <div class:list={['wcal__col', { 'is-today': day === todayDow }]} data-col={day}>
+            {events.filter((e) => e.day === day).map((e, i) => (
+              <button
+                type="button"
+                class:list={['wcal__ev', { 'is-featured': e.featured }]}
+                popovertarget={e.key}
+                style={`--c: ${e.color}; --top: ${e.top}; --len: ${e.len}; --lane: ${e.lane}; --lanes: ${e.lanes}; --i: ${i}`}
+                aria-label={`${e.title}, ${DAY_NAMES[e.day]} a las ${formatTime(e.time)}`}
+              >
+                <span class="wcal__ev-title">{e.title}</span>
+                <span class="wcal__ev-time">{formatTime(e.time)}</span>
+              </button>
+            ))}
+          </div>
+        ))}
+        <div class="wcal__now" hidden data-now><span></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Agenda (móviles) -->
+  <ol class="wcal__agenda">
+    {week.map((d, day) => {
+      const list = events.filter((e) => e.day === day);
+      return list.length > 0 && (
+        <li class:list={['wcal__aday', { 'is-today': day === todayDow }]}>
+          <div class="wcal__adate">
+            <span class="wcal__dow">{SHORT[day]}</span>
+            <span class="wcal__num">{d.getUTCDate()}</span>
+          </div>
+          <div class="wcal__aevents">
+            {list.map((e) => (
+              <button type="button" class="wcal__aev" popovertarget={e.key} style={`--c: ${e.color}`}>
+                <span class="wcal__aev-title">{e.title}</span>
+                <span class="wcal__aev-time">{formatTime(e.time)}{e.description && ` · ${e.description}`}</span>
+              </button>
+            ))}
+          </div>
+        </li>
+      );
+    })}
+    {note && (
+      <li class="wcal__aday wcal__aday--note">
+        <div class="wcal__adate"><Icon name="hands" size={20} /></div>
+        <div class="wcal__aevents"><p class="wcal__anote">{note}</p></div>
+      </li>
+    )}
+  </ol>
+
+  <!-- Fichas de cada reunión -->
+  {events.map((e) => (
+    <div class="wcal__pop" id={e.key} popover style={`--c: ${e.color}`}>
+      <div class="wcal__pop-top">
+        <span class="wcal__pop-swatch"></span>
+        <button type="button" class="wcal__pop-close" popovertarget={e.key} popovertargetaction="hide" aria-label="Cerrar">
+          <Icon name="close" size={20} />
+        </button>
+      </div>
+      <h3>{e.title}</h3>
+      <p class="wcal__pop-when"><Icon name="calendar" size={17} /> Cada {DAY_NAMES[e.day].toLowerCase()} · {formatTime(e.time)}</p>
+      {e.description && <p class="wcal__pop-desc">{e.description}</p>}
+      <p class="wcal__pop-where"><Icon name="pin" size={17} /> {address}</p>
+      <a class="btn btn--gold btn--sm" href={gcalLink(e)} target="_blank" rel="noopener" data-track="gcal">
+        <Icon name="calendar" /> Agregar a Google Calendar
+      </a>
+    </div>
+  ))}
+</div>
+
+<script>
+  // Línea roja de "ahora" en la columna de hoy (hora de Nicaragua); se actualiza cada minuto.
+  function placeNow() {
+    document.querySelectorAll<HTMLElement>('[data-wcal]').forEach((cal) => {
+      const line = cal.querySelector<HTMLElement>('[data-now]');
+      if (!line) return;
+      const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Managua', weekday: 'short', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' })
+        .formatToParts(new Date());
+      const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+      const day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(get('weekday'));
+      const hours = Number(get('hour')) + Number(get('minute')) / 60;
+      const start = Number(cal.dataset.start), end = Number(cal.dataset.end);
+      const visible = hours >= start && hours <= end && day >= 0;
+      line.hidden = !visible;
+      if (visible) {
+        line.style.setProperty('--now', String(hours - start));
+        line.style.setProperty('--day', String(day));
+      }
+    });
+  }
+  let timer: number | undefined;
+  document.addEventListener('astro:page-load', () => {
+    placeNow();
+    clearInterval(timer);
+    timer = window.setInterval(placeNow, 60_000);
+  });
+</script>
+
+<style>
+  .wcal {
+    --hour: 64px;
+    --gutter: 64px;
+    position: relative;
+    border: 1px solid var(--line); border-radius: var(--radius-lg);
+    background: var(--surface); overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  /* ---------- Barra superior ---------- */
+  .wcal__bar {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 18px 22px; border-bottom: 1px solid var(--line);
+    background: linear-gradient(100deg, rgba(227, 169, 43, 0.1), transparent 55%);
+  }
+  .wcal__title { display: flex; align-items: center; gap: 14px; }
+  .wcal__title p { margin: 0; }
+  .wcal__logo {
+    width: 46px; height: 50px; border-radius: 10px; overflow: hidden; flex: none;
+    background: var(--white); display: grid; grid-template-rows: 14px 1fr;
+    box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.8);
+    animation: wcal-flip 0.9s var(--ease) both 0.2s;
+  }
+  .wcal__logo-top { background: var(--gold); }
+  .wcal__logo-day { display: grid; place-items: center; color: #120d02; font-weight: 800; font-size: 1.25rem; line-height: 1; }
+  @keyframes wcal-flip { from { transform: perspective(300px) rotateX(-80deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  .wcal__month { font-family: var(--font-display); font-size: 1.45rem; color: var(--white); line-height: 1.1; }
+  .wcal__range { color: var(--muted); font-size: 0.88rem; }
+  .wcal__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .wcal__chip {
+    display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 999px;
+    font-size: 0.82rem; font-weight: 700; color: var(--text);
+    border: 1px solid var(--line); background: var(--surface-2);
+  }
+  .wcal__chip :global(svg) { color: var(--gold); }
+  .wcal__chip--today { border-color: var(--line-gold); color: var(--gold-light); }
+  .wcal__dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); animation: wcal-pulse 2s infinite; }
+  @keyframes wcal-pulse { 70% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+  /* ---------- Cabecera de días ---------- */
+  .wcal__head, .wcal__allday { display: grid; grid-template-columns: var(--gutter) repeat(7, minmax(0, 1fr)); }
+  .wcal__head { border-bottom: 1px solid var(--line); }
+  .wcal__gutter-head { display: flex; align-items: flex-end; justify-content: flex-end; padding: 0 10px 8px 0; }
+  .wcal__gutter-head span { font-size: 0.66rem; color: var(--muted); letter-spacing: 0.04em; text-align: right; line-height: 1.2; }
+  .wcal__dayhead { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 0 10px; border-left: 1px solid var(--line); }
+  .wcal__dow { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .wcal__num {
+    width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center;
+    font-size: 1.35rem; color: var(--white); font-weight: 500; transition: background 0.2s;
+  }
+  .wcal__dayhead.is-today .wcal__dow { color: var(--gold-light); }
+  .wcal__dayhead.is-today .wcal__num,
+  .wcal__aday.is-today .wcal__num { background: var(--gold); color: #120d02; font-weight: 800; box-shadow: 0 6px 18px -6px rgba(227, 169, 43, 0.8); }
+
+  /* ---------- Franja de todo el día ---------- */
+  .wcal__allday { border-bottom: 1px solid var(--line); }
+  .wcal__allday .wcal__gutter-head { align-items: center; padding-bottom: 0; }
+  .wcal__allday-track { grid-column: 2 / -1; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 6px 0; }
+  .wcal__allday-ev {
+    display: flex; align-items: center; gap: 8px; margin: 0 4px; padding: 5px 12px;
+    border-radius: 8px; font-size: 0.82rem; font-weight: 600; color: var(--white);
+    background: linear-gradient(90deg, rgba(183, 156, 240, 0.32), rgba(183, 156, 240, 0.14));
+    border-left: 3px solid #b79cf0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .wcal__allday-ev :global(svg) { color: #cdb8ff; flex: none; }
+
+  /* ---------- Cuadrícula de horas ---------- */
+  .wcal__body { display: grid; grid-template-columns: var(--gutter) 1fr; max-height: 560px; overflow-y: auto; }
+  .wcal__gutter { display: grid; grid-template-rows: repeat(var(--rows), var(--hour)); }
+  .wcal__hour { position: relative; font-size: 0.7rem; color: var(--muted); text-align: right; padding-right: 10px; transform: translateY(-0.6em); }
+  .wcal__hour:first-child { visibility: hidden; }
+  .wcal__grid {
+    position: relative; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+    height: calc(var(--rows) * var(--hour));
+    background-image: linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+    background-size: 100% var(--hour);
+  }
+  .wcal__col { position: relative; border-left: 1px solid var(--line); }
+  .wcal__col.is-today { background: linear-gradient(180deg, rgba(227, 169, 43, 0.07), rgba(227, 169, 43, 0.02)); }
+
+  /* ---------- Bloques de reunión ---------- */
+  .wcal__ev {
+    position: absolute;
+    top: calc(var(--top) * var(--hour) + 2px);
+    height: calc(var(--len) * var(--hour) - 4px);
+    left: calc(4px + (100% - 8px) / var(--lanes) * var(--lane));
+    width: calc((100% - 8px) / var(--lanes) - 2px);
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    padding: 8px 10px; border: 0; border-radius: 10px; cursor: pointer; text-align: left;
+    color: var(--white); font: inherit; overflow: hidden;
+    background: color-mix(in srgb, var(--c) 26%, var(--surface-2));
+    border-left: 4px solid var(--c);
+    box-shadow: 0 0 0 2px var(--surface);
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, background-color 0.15s;
+    animation: wcal-drop 0.7s var(--ease) both; animation-delay: calc(0.25s + var(--i) * 0.08s);
+  }
+  .wcal__ev::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.12) 50%, transparent 70%);
+    transform: translateX(-120%); transition: transform 0.6s ease-out;
+  }
+  .wcal__ev:hover, .wcal__ev:focus-visible {
+    transform: translateY(-2px) scale(1.02); z-index: 3;
+    background: color-mix(in srgb, var(--c) 38%, var(--surface-2));
+    box-shadow: 0 0 0 2px var(--surface), 0 14px 30px -12px color-mix(in srgb, var(--c) 70%, transparent);
+  }
+  .wcal__ev:hover::after { transform: translateX(120%); }
+  .wcal__ev:focus-visible { outline: 2px solid var(--c); outline-offset: 2px; }
+  .wcal__ev.is-featured { background: color-mix(in srgb, var(--c) 34%, var(--surface-2)); }
+  .wcal__ev-title { font-size: 0.84rem; font-weight: 700; line-height: 1.2; }
+  .wcal__ev-time { font-size: 0.76rem; color: color-mix(in srgb, var(--c) 55%, var(--white)); font-weight: 600; }
+  @keyframes wcal-drop { from { opacity: 0; transform: translateY(-10px) scale(0.96); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Línea de "ahora" ---------- */
+  .wcal__now {
+    position: absolute; z-index: 4; pointer-events: none; height: 2px; background: #ef4444;
+    top: calc(var(--now, 0) * var(--hour));
+    left: calc(100% / 7 * var(--day, 0)); width: calc(100% / 7);
+  }
+  .wcal__now span {
+    position: absolute; left: -6px; top: -5px; width: 12px; height: 12px; border-radius: 50%; background: #ef4444;
+    animation: wcal-pulse 2s infinite;
+  }
+
+  /* ---------- Ficha (popover) ---------- */
+  .wcal__pop {
+    width: min(380px, calc(100vw - 32px)); padding: 18px 22px 22px; margin: auto;
+    border: 1px solid var(--line); border-radius: 18px;
+    background: var(--surface-2); color: var(--text);
+    box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.9);
+  }
+  .wcal__pop::backdrop { background: rgba(0, 0, 0, 0.55); backdrop-filter: blur(3px); }
+  .wcal__pop:popover-open { animation: wcal-pop 0.25s var(--ease); }
+  @keyframes wcal-pop { from { opacity: 0; transform: translateY(10px) scale(0.97); } }
+  .wcal__pop-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .wcal__pop-swatch { width: 18px; height: 18px; border-radius: 6px; background: var(--c); }
+  .wcal__pop-close {
+    width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+    border: 0; background: transparent; color: var(--muted); cursor: pointer; transition: background 0.12s, color 0.12s;
+  }
+  .wcal__pop-close:hover { background: var(--surface-3); color: var(--white); }
+  .wcal__pop h3 { font-size: 1.4rem; margin-bottom: 8px; }
+  .wcal__pop p { display: flex; gap: 10px; align-items: flex-start; margin: 0 0 10px; font-size: 0.94rem; }
+  .wcal__pop p :global(svg) { color: var(--gold); flex: none; margin-top: 2px; }
+  .wcal__pop-desc { color: var(--muted); padding-left: 27px; }
+  .wcal__pop-where { color: var(--muted); font-size: 0.86rem !important; }
+  .wcal__pop .btn { margin-top: 8px; width: 100%; }
+
+  /* ---------- Agenda (móviles) ---------- */
+  .wcal__agenda { display: none; list-style: none; margin: 0; padding: 6px 0; }
+  .wcal__aday { display: grid; grid-template-columns: 58px 1fr; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .wcal__aday:last-child { border-bottom: 0; }
+  .wcal__adate { display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--gold); }
+  .wcal__adate .wcal__num { width: 40px; height: 40px; font-size: 1.2rem; }
+  .wcal__aevents { display: grid; gap: 8px; }
+  .wcal__aev {
+    display: grid; gap: 2px; text-align: left; width: 100%; cursor: pointer; font: inherit; color: var(--white);
+    padding: 12px 14px; border: 0; border-radius: 12px; border-left: 4px solid var(--c);
+    background: color-mix(in srgb, var(--c) 22%, var(--surface-2));
+    transition: transform 0.12s ease-out, background-color 0.12s;
+  }
+  .wcal__aev:active { transform: scale(0.98); }
+  .wcal__aev-title { font-weight: 700; font-size: 0.98rem; }
+  .wcal__aev-time { font-size: 0.84rem; color: color-mix(in srgb, var(--c) 50%, var(--white)); }
+  .wcal__anote { margin: 0; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; color: var(--white); background: rgba(183, 156, 240, 0.18); border-left: 4px solid #b79cf0; }
+
+  @media (max-width: 760px) {
+    .wcal__week { display: none; }
+    .wcal__agenda { display: block; }
+    .wcal__bar { padding: 16px; }
+  }
+</style>

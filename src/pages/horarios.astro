@@ -2,7 +2,7 @@
 export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import PageHero from '../components/PageHero.astro';
-import ScheduleList from '../components/ScheduleList.astro';
+import WeekCalendar from '../components/WeekCalendar.astro';
 import SectionHeading from '../components/SectionHeading.astro';
 import Icon from '../components/Icon.astro';
 import { getPrayerNote, getSchedules, getSiteInfo } from '../lib/content';
@@ -17,8 +17,8 @@ const l = links(site);
 
   <section class="section">
     <div class="container">
-      <SectionHeading eyebrow="Horarios" title="Cultos y reuniones semanales" />
-      <ScheduleList items={schedules} note={prayerNote} />
+      <SectionHeading eyebrow="Horarios" title="Cultos y reuniones semanales" lead="Toca cualquier reunión para ver los detalles y agregarla a tu calendario." />
+      <WeekCalendar items={schedules} note={prayerNote} address={site.address} />
       <p class="muted note" data-reveal><Icon name="info" size={18} /> Los horarios pueden variar en fechas especiales. Mantente atento a nuestras redes sociales.</p>
     </div>
   </section>
