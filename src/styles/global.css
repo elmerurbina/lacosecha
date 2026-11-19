@@ -123,7 +123,7 @@ p { margin: 0 0 1em; text-wrap: pretty; }
   background: var(--bg); color: var(--fg); border: 1px solid var(--bd);
   border-radius: 999px; font: 700 0.95rem/1 var(--font-body);
   text-decoration: none; cursor: pointer; white-space: nowrap;
-  transition: transform 0.25s var(--ease), background 0.25s, border-color 0.25s, color 0.25s, box-shadow 0.25s;
+  transition: transform 0.14s ease-out, background-color 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.14s;
 }
 .btn:hover { transform: translateY(-2px); color: var(--fg); }
 .btn svg { width: 18px; height: 18px; flex: none; }

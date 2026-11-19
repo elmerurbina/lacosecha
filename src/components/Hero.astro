@@ -58,13 +58,21 @@ const l = links(site);
       linear-gradient(90deg, rgba(10, 10, 10, 0.92) 0%, rgba(10, 10, 10, 0.65) 55%, rgba(10, 10, 10, 0.35) 100%),
       linear-gradient(to top, var(--black) 0%, transparent 40%);
   }
-  /* Haz de luz diagonal que cruza lentamente la portada. */
+  /* Haz de luz diagonal que cruza lentamente la portada.
+     Solo anima transform (GPU), sin mezcla de capas, para que sea fluido. */
   .hero__ray {
-    position: absolute; top: -30%; bottom: -30%; width: 34%; left: -40%;
-    background: linear-gradient(90deg, transparent, rgba(244, 201, 93, 0.12), transparent);
-    transform: skewX(-18deg); animation: hero-ray 11s ease-in-out infinite; mix-blend-mode: screen;
+    position: absolute; top: -30%; bottom: -30%; left: 0; width: 40%;
+    background: linear-gradient(90deg,
+      rgba(244, 201, 93, 0) 0%, rgba(244, 201, 93, 0.04) 25%, rgba(244, 201, 93, 0.11) 50%,
+      rgba(244, 201, 93, 0.04) 75%, rgba(244, 201, 93, 0) 100%);
+    transform: translate3d(-160%, 0, 0) skewX(-18deg);
+    animation: hero-ray 16s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+    will-change: transform;
   }
-  @keyframes hero-ray { 0% { left: -40%; } 55%, 100% { left: 120%; } }
+  @keyframes hero-ray {
+    0% { transform: translate3d(-160%, 0, 0) skewX(-18deg); }
+    60%, 100% { transform: translate3d(300%, 0, 0) skewX(-18deg); }
+  }
 
   .hero__content { position: relative; }
   .hero__kicker {
@@ -76,11 +84,12 @@ const l = links(site);
   .hero h1 { max-width: 14ch; margin-bottom: 22px; }
   .hero h1 em {
     font-style: italic; color: var(--gold);
-    background: linear-gradient(100deg, var(--gold-dark) 0%, var(--gold) 30%, #fff1c7 50%, var(--gold) 70%, var(--gold-dark) 100%);
-    background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-    animation: shimmer 6s ease-in-out infinite;
+    /* Brillo continuo: el degradado se repite y avanza siempre en la misma dirección (sin saltos). */
+    background: linear-gradient(90deg, var(--gold) 0%, var(--gold) 30%, #fbe3a1 50%, var(--gold) 70%, var(--gold) 100%) 0 0 / 200% 100% repeat-x;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    animation: shimmer 7s linear infinite;
   }
-  @keyframes shimmer { 0%, 100% { background-position: 100% 0; } 50% { background-position: 0 0; } }
+  @keyframes shimmer { from { background-position: 0 0; } to { background-position: -200% 0; } }
   .hero__lead { font-size: clamp(1.1rem, 1.8vw, 1.3rem); max-width: 54ch; color: var(--text); margin-bottom: 26px; }
   .hero__motto {
     position: relative;
@@ -104,5 +113,6 @@ const l = links(site);
 
   @media (max-width: 560px) {
     .hero__cta .btn { flex: 1 1 100%; }
+    .hero__scroll { display: none; }
   }
 </style>

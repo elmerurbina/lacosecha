@@ -114,26 +114,28 @@ const bars = Array.from({ length: 48 }, (_, i) => ({
   .scene { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
 
   /* ---------- Aurora base ---------- */
-  .scene__aurora { position: absolute; inset: -20%; filter: blur(60px); opacity: 0.75; }
-  .blob { position: absolute; border-radius: 50%; mix-blend-mode: screen; }
+  /* Sin filter: blur ni mix-blend-mode: los degradados radiales ya son suaves y así
+     el navegador solo mueve capas (transform), sin repintar en cada cuadro. */
+  .scene__aurora { position: absolute; inset: -20%; opacity: 0.75; }
+  .blob { position: absolute; border-radius: 50%; will-change: transform; }
   .blob--1 {
     width: 46%; height: 60%; right: 6%; top: 0;
-    background: radial-gradient(circle, rgba(227, 169, 43, 0.38), transparent 65%);
-    animation: drift-a 22s ease-in-out infinite alternate;
+    background: radial-gradient(circle, rgba(227, 169, 43, 0.3) 0%, rgba(227, 169, 43, 0.12) 35%, transparent 70%);
+    animation: drift-a 26s ease-in-out infinite alternate;
   }
   .blob--2 {
     width: 38%; height: 50%; left: 8%; bottom: 0;
-    background: radial-gradient(circle, rgba(184, 129, 26, 0.3), transparent 65%);
-    animation: drift-b 28s ease-in-out infinite alternate;
+    background: radial-gradient(circle, rgba(184, 129, 26, 0.24) 0%, rgba(184, 129, 26, 0.09) 35%, transparent 70%);
+    animation: drift-b 32s ease-in-out infinite alternate;
   }
   .blob--3 {
     width: 30%; height: 40%; left: 45%; top: 30%;
-    background: radial-gradient(circle, rgba(244, 201, 93, 0.18), transparent 65%);
-    animation: drift-c 18s ease-in-out infinite alternate;
+    background: radial-gradient(circle, rgba(244, 201, 93, 0.14) 0%, rgba(244, 201, 93, 0.05) 35%, transparent 70%);
+    animation: drift-c 22s ease-in-out infinite alternate;
   }
-  @keyframes drift-a { to { transform: translate(-18%, 22%) scale(1.15); } }
-  @keyframes drift-b { to { transform: translate(24%, -18%) scale(1.2); } }
-  @keyframes drift-c { to { transform: translate(-30%, -20%) scale(0.85); } }
+  @keyframes drift-a { to { transform: translate3d(-18%, 22%, 0) scale(1.15); } }
+  @keyframes drift-b { to { transform: translate3d(24%, -18%, 0) scale(1.2); } }
+  @keyframes drift-c { to { transform: translate3d(-30%, -20%, 0) scale(0.85); } }
 
   /* ---------- Chispas que suben ---------- */
   .scene__sparks span {
@@ -141,15 +143,15 @@ const bars = Array.from({ length: 48 }, (_, i) => ({
     width: var(--s); height: var(--s); border-radius: 50%;
     background: var(--gold-light);
     box-shadow: 0 0 10px 2px rgba(244, 201, 93, 0.55);
-    opacity: 0;
+    opacity: 0; will-change: transform, opacity;
     animation: ember var(--dur) linear infinite;
     animation-delay: var(--delay);
   }
   @keyframes ember {
-    0% { transform: translate(0, 0) scale(1); opacity: 0; }
+    0% { transform: translate3d(0, 0, 0) scale(1); opacity: 0; }
     10% { opacity: 0.9; }
     70% { opacity: 0.55; }
-    100% { transform: translate(var(--drift), -110vh) scale(0.3); opacity: 0; }
+    100% { transform: translate3d(var(--drift), -110vh, 0) scale(0.3); opacity: 0; }
   }
 
   .scene__grain {
