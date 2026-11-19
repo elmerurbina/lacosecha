@@ -1,4 +1,5 @@
 ---
+export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import PageHero from '../components/PageHero.astro';
 import ContactLinks from '../components/ContactLinks.astro';
@@ -15,7 +16,7 @@ const site = await getSiteInfo();
     <div class="container contact">
       <div>
         <h2 class="h3" data-reveal>Medios de contacto</h2>
-        <ContactLinks />
+        <ContactLinks site={site} />
       </div>
 
       <div class="card prayer-card" id="oracion" data-reveal>

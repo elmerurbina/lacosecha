@@ -1,7 +1,10 @@
 ---
 import Logo from './Logo.astro';
 import Icon from './Icon.astro';
-import { siteInfo } from '../data/seed';
+import type { SiteInfo } from '../lib/types';
+
+interface Props { site: SiteInfo }
+const { site: siteInfo } = Astro.props;
 import { links } from '../lib/utils';
 import { nav } from '../data/nav';
 
@@ -11,7 +14,7 @@ const year = new Date().getFullYear();
 <footer class="footer">
   <div class="container footer__grid">
     <div class="footer__brand">
-      <Logo size={56} />
+      <Logo size={56} src={siteInfo.logo} />
       <p class="footer__motto">“{siteInfo.motto}”<span>{siteInfo.mottoRef}</span></p>
       <p class="muted small">{siteInfo.denomination} · {siteInfo.city}</p>
     </div>

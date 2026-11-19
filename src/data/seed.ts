@@ -42,8 +42,8 @@ export const siteInfo: SiteInfo = {
     instagram: 'https://www.instagram.com/c.e.lacosecha',
     tiktok: 'https://www.tiktok.com/@c_e_lacosecha',
   },
-  heroImage: '/images/hero.jpg',
-  logo: '/images/logo.png',
+  heroImage: '/images/galeria/hero.jpg',
+  logo: '/logo.png',
 };
 
 export const schedules: Schedule[] = [
@@ -64,7 +64,7 @@ export const aboutSections: AboutSection[] = [
     subtitle: 'Fundada el 20 de diciembre de 2025',
     body:
       'La Comunidad Evangélica La Cosecha nace en Juigalpa, Chontales, el 20 de diciembre de 2025, bajo la cobertura de las Asambleas de Dios. Desde sus inicios ha buscado ser un hogar espiritual donde las familias conozcan a Jesucristo, crezcan en la Palabra y sirvan a su comunidad.',
-    image: '/images/historia.jpg',
+    image: '/images/galeria/historia.jpg',
   },
   {
     id: 'mision',
@@ -94,7 +94,7 @@ export const aboutSections: AboutSection[] = [
     body: 'Vivimos nuestra fe en comunidad, guiados por principios bíblicos que dan forma a todo lo que hacemos.',
     // TODO: confirmar la lista oficial de valores.
     list: ['Fe', 'Amor', 'Servicio', 'Unidad', 'Integridad'],
-    image: '/images/valores.jpg',
+    image: '/images/galeria/valores.jpg',
   },
   {
     id: 'liderazgo',
@@ -103,7 +103,7 @@ export const aboutSections: AboutSection[] = [
     subtitle: 'Pastor Pedro Obando y Pastora Fátima González',
     body:
       'La congregación es pastoreada por el Pastor Pedro Obando (pastor general) y la Pastora Fátima González (pastora asociada), quienes junto al equipo ministerial guían, enseñan y acompañan a la iglesia.',
-    image: '/images/pastores.jpg',
+    image: '/images/galeria/liderazgo.jpg',
   },
 ];
 

@@ -109,7 +109,7 @@ const payload = JSON.stringify({ events, schedules });
       const start = startOfWeek(first);
       title.textContent = `${cap(MONTHS[cursor.getMonth()])} ${cursor.getFullYear()}`;
       let html = '<div class="cal-month">';
-      html += '<div class="cal-month__head">' + DAYS_SHORT.map((d, i) => `<span aria-hidden="true">${d}</span>`).join('') + '</div>';
+      html += '<div class="cal-month__head">' + DAYS_SHORT.map((d) => `<span aria-hidden="true">${d}</span>`).join('') + '</div>';
       html += '<div class="cal-month__grid">';
       let any = false;
       for (let i = 0; i < 42; i++) {

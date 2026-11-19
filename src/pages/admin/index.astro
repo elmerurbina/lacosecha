@@ -1,14 +1,10 @@
 ---
 /**
- * Panel administrativo — página provisional.
- * En producción se sirve en https://admin.comunidadlacosecha.com (ver vercel.json):
- * Vercel reescribe ese subdominio hacia /admin/*, y /admin en el dominio público
- * redirige al subdominio.
- *
- * Usa su propio documento (sin el header/footer público) y no se indexa.
+ * Panel administrativo (RF-22..RF-37).
+ * En producción se sirve en https://admin.comunidadlacosecha.com (ver vercel.json).
+ * Es una SPA estática: toda la seguridad la imponen Supabase Auth + RLS (RNF-14/16).
  */
-import Logo from '../../components/Logo.astro';
-import '../../styles/global.css';
+import '../../styles/admin.css';
 ---
 <!doctype html>
 <html lang="es">
@@ -16,33 +12,24 @@ import '../../styles/global.css';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="theme-color" content="#0a0a0a" />
     <title>Panel administrativo | La Cosecha</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Playfair+Display:wght@600&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Playfair+Display:wght@600&display=swap" />
   </head>
   <body>
-    <main class="admin">
-      <div class="admin__card">
-        <Logo size={64} />
-        <h1>Panel administrativo</h1>
-        <p class="muted">El panel de administración está en construcción. Aquí podrás gestionar eventos, ministerios, prédicas, anuncios y peticiones de oración.</p>
-        <a class="btn btn--gold" href="https://comunidadlacosecha.com">Ir al sitio público</a>
-      </div>
-    </main>
+    <div id="app">
+      <div class="state" role="status"><span class="spinner" aria-hidden="true"></span>Cargando panel…</div>
+    </div>
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+    <noscript><p class="state">El panel administrativo requiere JavaScript.</p></noscript>
+    <script>
+      import '../../admin/main';
+    </script>
   </body>
 </html>
-
-<style>
-  .admin {
-    min-height: 100svh; display: grid; place-items: center; padding: 24px 16px;
-    background: radial-gradient(ellipse at 50% 0%, rgba(227, 169, 43, 0.16), transparent 60%), var(--black);
-  }
-  .admin__card {
-    width: 100%; max-width: 460px; padding: 40px 28px; text-align: center;
-    background: var(--surface-2); border: 1px solid var(--line-gold); border-radius: var(--radius-lg);
-    display: flex; flex-direction: column; align-items: center; gap: 12px;
-  }
-  .admin__card h1 { font-size: 1.8rem; margin: 16px 0 0; }
-</style>

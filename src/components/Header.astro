@@ -2,6 +2,10 @@
 import Logo from './Logo.astro';
 import Icon from './Icon.astro';
 import { nav } from '../data/nav';
+import type { SiteInfo } from '../lib/types';
+
+interface Props { site: SiteInfo }
+const { site } = Astro.props;
 
 const path = Astro.url.pathname.replace(/\/$/, '') || '/';
 const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href));
@@ -9,7 +13,7 @@ const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWit
 <header class="site-header" data-header>
   <div class="container site-header__inner">
     <a href="/" class="site-header__brand" aria-label="Comunidad Evangélica La Cosecha — Inicio">
-      <Logo size={50} />
+      <Logo size={50} src={site.logo} />
     </a>
 
     <nav class="site-nav" id="site-nav" aria-label="Navegación principal" data-nav>

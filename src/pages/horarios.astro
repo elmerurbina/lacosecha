@@ -1,14 +1,15 @@
 ---
+export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import PageHero from '../components/PageHero.astro';
 import ScheduleList from '../components/ScheduleList.astro';
 import SectionHeading from '../components/SectionHeading.astro';
 import Icon from '../components/Icon.astro';
-import { getSchedules, getSiteInfo, prayerNote } from '../lib/content';
+import { getPrayerNote, getSchedules, getSiteInfo } from '../lib/content';
 import { links } from '../lib/utils';
 
 const site = await getSiteInfo();
-const schedules = await getSchedules();
+const [schedules, prayerNote] = await Promise.all([getSchedules(), getPrayerNote()]);
 const l = links(site);
 ---
 <Layout title="Horarios y ubicación" description={`Horarios de culto y reuniones de la ${site.name}. Dirección: ${site.address}.`}>

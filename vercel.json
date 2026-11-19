@@ -3,33 +3,63 @@
   "redirects": [
     {
       "source": "/admin/:path*",
-      "has": [{ "type": "host", "value": "(?:www\\.)?comunidadlacosecha\\.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "(?:www\\.)?comunidadlacosecha\\.com"
+        }
+      ],
       "destination": "https://admin.comunidadlacosecha.com/:path*",
       "permanent": true
     },
     {
       "source": "/admin",
-      "has": [{ "type": "host", "value": "(?:www\\.)?comunidadlacosecha\\.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "(?:www\\.)?comunidadlacosecha\\.com"
+        }
+      ],
       "destination": "https://admin.comunidadlacosecha.com/",
       "permanent": true
     }
   ],
   "rewrites": [
     {
-      "source": "/:path((?!_astro/|images/|favicon|admin/|admin$).*)",
-      "has": [{ "type": "host", "value": "admin.comunidadlacosecha.com" }],
-      "destination": "/admin/:path"
+      "source": "/:path((?!_astro/|images/|admin/|admin$)(?!.*\\.[A-Za-z0-9]+$).*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.comunidadlacosecha.com"
+        }
+      ],
+      "destination": "/admin"
     }
   ],
   "headers": [
     {
       "source": "/(.*)",
-      "has": [{ "type": "host", "value": "admin.comunidadlacosecha.com" }],
-      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+      "has": [
+        {
+          "type": "host",
+          "value": "admin.comunidadlacosecha.com"
+        }
+      ],
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
     },
     {
       "source": "/admin/(.*)",
-      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
     }
   ]
 }

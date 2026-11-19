@@ -1,7 +1,14 @@
 ---
 import Icon from './Icon.astro';
-import { siteInfo } from '../data/seed';
 import { links } from '../lib/utils';
+import type { SiteInfo } from '../lib/types';
+
+interface Props { site: SiteInfo }
+const { site: siteInfo } = Astro.props;
+const handle = (url: string, fallback: string) => {
+  const m = url.match(/(?:instagram|tiktok)\.com\/@?([\w.]+)/i);
+  return m ? `@${m[1]}` : fallback;
+};
 
 const l = links(siteInfo);
 const items = [
@@ -9,9 +16,9 @@ const items = [
   { icon: 'phone', label: 'Teléfono', value: siteInfo.phone, href: l.phone, track: 'phone', cta: 'Llamar' },
   { icon: 'mail', label: 'Correo', value: siteInfo.email, href: l.email, track: 'email', cta: 'Escribir' },
   { icon: 'pin', label: 'Ubicación', value: siteInfo.address, href: l.maps, external: true, track: 'maps', cta: 'Cómo llegar' },
-  { icon: 'facebook', label: 'Facebook', value: 'Comunidad Evangélica La Cosecha', href: siteInfo.social.facebook, external: true, track: 'facebook', cta: 'Visitar' },
-  { icon: 'instagram', label: 'Instagram', value: '@c.e.lacosecha', href: siteInfo.social.instagram, external: true, track: 'instagram', cta: 'Seguir' },
-  { icon: 'tiktok', label: 'TikTok', value: '@c_e_lacosecha', href: siteInfo.social.tiktok, external: true, track: 'tiktok', cta: 'Seguir' },
+  { icon: 'facebook', label: 'Facebook', value: siteInfo.name, href: siteInfo.social.facebook, external: true, track: 'facebook', cta: 'Visitar' },
+  { icon: 'instagram', label: 'Instagram', value: handle(siteInfo.social.instagram, 'Instagram'), href: siteInfo.social.instagram, external: true, track: 'instagram', cta: 'Seguir' },
+  { icon: 'tiktok', label: 'TikTok', value: handle(siteInfo.social.tiktok, 'TikTok'), href: siteInfo.social.tiktok, external: true, track: 'tiktok', cta: 'Seguir' },
 ];
 ---
 <ul class="contact-links">

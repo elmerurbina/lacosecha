@@ -3,7 +3,7 @@ import { ClientRouter } from 'astro:transitions';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import Icon from '../components/Icon.astro';
-import { siteInfo } from '../data/seed';
+import { getSiteInfo } from '../lib/content';
 import { links } from '../lib/utils';
 import '../styles/global.css';
 
@@ -14,6 +14,7 @@ interface Props {
   noindex?: boolean;
 }
 
+const siteInfo = await getSiteInfo();
 const {
   title,
   description = siteInfo.description,
@@ -55,8 +56,11 @@ const jsonLd = {
     <link rel="canonical" href={canonical} />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     <meta name="theme-color" content="#0a0a0a" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="sitemap" href="/sitemap.xml" />
 
     <meta property="og:type" content="website" />
@@ -84,11 +88,11 @@ const jsonLd = {
   </head>
   <body>
     <a href="#main" class="skip-link">Saltar al contenido</a>
-    <Header />
+    <Header site={siteInfo} />
     <main id="main" tabindex="-1">
       <slot />
     </main>
-    <Footer />
+    <Footer site={siteInfo} />
 
     <a href={l.whatsapp} class="wa-float" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp" data-track="whatsapp">
       <Icon name="whatsapp" size={28} />
@@ -98,7 +102,7 @@ const jsonLd = {
       import { track } from '../lib/supabase-client';
 
       // Métricas anónimas (RF-35): visitas por página y clics en contacto / redes.
-      document.addEventListener('astro:page-load', () => track('page_view', document.referrer || undefined));
+      document.addEventListener('astro:page-load', () => track('page_view', document.referrer ? new URL(document.referrer).hostname : undefined));
       document.addEventListener('click', (e) => {
         const el = (e.target as HTMLElement).closest<HTMLElement>('[data-track]');
         if (el) track('click', el.dataset.track);

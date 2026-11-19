@@ -24,8 +24,30 @@ export async function insertRow(table: string, row: Record<string, unknown>): Pr
   if (!res.ok) throw new Error(res.status === 429 ? 'rate-limited' : `http-${res.status}`);
 }
 
+/**
+ * Identificadores anónimos aleatorios (no contienen datos personales):
+ * - visitante: persiste en este navegador (localStorage)
+ * - sesión: dura mientras la pestaña esté abierta (sessionStorage)
+ */
+function anonId(store: 'localStorage' | 'sessionStorage', key: string): string | null {
+  try {
+    const s = window[store];
+    let id = s.getItem(key);
+    if (!id) { id = crypto.randomUUID(); s.setItem(key, id); }
+    return id;
+  } catch {
+    return null;
+  }
+}
+
 /** Registro anónimo de interacciones (RF-35). Falla en silencio. */
-export function track(kind: string, detail?: string) {
-  if (!isConfigured) return;
-  insertRow('interactions', { kind, detail: detail ?? null, path: location.pathname }).catch(() => {});
+export function track(kind: 'page_view' | 'click', detail?: string) {
+  if (!isConfigured || location.hostname === 'localhost' || navigator.webdriver) return;
+  insertRow('interactions', {
+    kind,
+    detail: detail ? detail.slice(0, 300) : null,
+    path: location.pathname.slice(0, 200),
+    visitor_id: anonId('localStorage', 'lc-vid'),
+    session_id: anonId('sessionStorage', 'lc-sid'),
+  }).catch(() => {});
 }

@@ -1,19 +1,18 @@
 ---
 /**
- * Logotipo de la iglesia. Carga `siteInfo.logo` (por defecto /images/logo.png).
+ * Logotipo de la iglesia (se configura en el panel; por defecto /logo.png).
  * Si el archivo no existe, muestra un emblema de respaldo con la espiga dorada.
  */
 import Wheat from './Wheat.astro';
-import { siteInfo } from '../data/seed';
 
-interface Props { size?: number; withText?: boolean }
-const { size = 48, withText = true } = Astro.props;
+interface Props { size?: number; withText?: boolean; src?: string | null }
+const { size = 48, withText = true, src = '/logo.png' } = Astro.props;
 ---
 <span class="logo" style={`--size: ${size}px`}>
   <span class="logo__mark">
     <span class="logo__fallback" aria-hidden="true"><Wheat /></span>
-    {siteInfo.logo && (
-      <img src={siteInfo.logo} alt="" width={size} height={size} decoding="async" onerror="this.remove()" />
+    {src && (
+      <img src={src} alt="" width={size} height={size} decoding="async" onerror="this.remove()" />
     )}
   </span>
   {withText && (

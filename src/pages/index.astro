@@ -1,4 +1,5 @@
 ---
+export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import Hero from '../components/Hero.astro';
 import Icon from '../components/Icon.astro';
@@ -9,15 +10,15 @@ import MinistryCard from '../components/MinistryCard.astro';
 import AnnouncementList from '../components/AnnouncementList.astro';
 import Gallery from '../components/Gallery.astro';
 import {
-  getSiteInfo, getSchedules, getMinistries, getAnnouncements, getGallery, getEvents, prayerNote,
+  getSiteInfo, getSchedules, getMinistries, getAnnouncements, getGallery, getEvents, getPrayerNote,
 } from '../lib/content';
 import { formatDate, formatTime, links } from '../lib/utils';
 
 const site = await getSiteInfo();
-const [schedules, ministries, announcements, gallery, events] = await Promise.all([
-  getSchedules(), getMinistries(), getAnnouncements(), getGallery(), getEvents(),
+const [schedules, ministries, announcements, gallery, events, prayerNote] = await Promise.all([
+  getSchedules(), getMinistries(), getAnnouncements(), getGallery(), getEvents(), getPrayerNote(),
 ]);
-const today = new Date().toISOString().slice(0, 10);
+const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Managua' });
 const upcoming = events.filter((e) => e.date >= today).slice(0, 3);
 const l = links(site);
 
