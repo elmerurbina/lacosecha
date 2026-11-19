@@ -182,10 +182,10 @@ const quick = [
   .quick { position: relative; z-index: 2; margin-top: -64px; }
   .quick__grid {
     list-style: none; margin: 0; padding: 0;
-    display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
   }
-  @media (min-width: 720px) { .quick__grid { grid-template-columns: repeat(3, 1fr); } }
-  @media (min-width: 1100px) { .quick__grid { grid-template-columns: repeat(6, 1fr); } }
+  @media (min-width: 720px) { .quick__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (min-width: 1100px) { .quick__grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
   .quick__item {
     height: 100%; display: flex; align-items: center; gap: 12px; padding: 18px 16px;
     background: rgba(27, 26, 24, 0.92); backdrop-filter: blur(8px);
@@ -242,7 +242,8 @@ const quick = [
   @keyframes badge-float { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(2deg); } }
   .welcome__badge span { display: block; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; }
   .welcome__badge strong { font-family: var(--font-display); font-size: 2rem; line-height: 1; }
-  @media (max-width: 560px) { .welcome__badge { right: 12px; } .welcome__ring { left: -24px; top: -24px; width: 90px; height: 90px; } .welcome__frame { display: none; } }
+  @media (max-width: 899px) { .welcome__frame { translate: 10px 10px; animation: none; } .welcome__media { margin-right: 10px; } }
+  @media (max-width: 560px) { .welcome__badge { right: 12px; } .welcome__ring { left: -10px; top: -24px; width: 90px; height: 90px; } .welcome__frame { display: none; } }
 
   .marquee {
     overflow: hidden; border-block: 1px solid var(--line); background: var(--surface);
