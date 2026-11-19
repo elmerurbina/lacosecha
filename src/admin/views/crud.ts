@@ -4,7 +4,14 @@
  */
 import { sb, friendlyError } from '../sb';
 import { h, icon, toast, confirmDialog, loading, emptyState, errorState, slugify } from '../dom';
-import { buildField, validateAll, cleanupMedia, geoValue, type FieldControl } from '../fields';
+import { buildField, validateAll, cleanupMedia, geoValue, type FieldControl, type GalleryValue } from '../fields';
+
+/** Valor inicial de la galería; si el registro es anterior a 005, usa su única imagen. */
+function galleryValue(row: Row): GalleryValue {
+  const media = Array.isArray(row.media) && row.media.length ? row.media
+    : row.image ? [{ url: row.image, type: 'image' as const }] : [];
+  return { media, cover: row.cover ?? row.image ?? null };
+}
 import { removeMedia } from '../upload';
 import type { Resource, Row } from '../resources';
 
@@ -116,6 +123,12 @@ async function deleteRow(r: Resource, row: Row): Promise<boolean> {
   if (error) { toast(friendlyError(error), 'error'); return false; }
   // Borrar archivos propios asociados
   r.fields.filter((f) => f.type === 'image' || f.type === 'video').forEach((f) => removeMedia(row[f.key]));
+  // Galería: borrar cada foto/video, y la imagen heredada si no estaba en la lista.
+  if (r.fields.some((f) => f.type === 'gallery')) {
+    const urls = new Set<string>((Array.isArray(row.media) ? row.media : []).map((m: { url?: string }) => m?.url).filter((u: string | undefined): u is string => !!u));
+    if (row.image) urls.add(row.image);
+    urls.forEach((u) => removeMedia(u));
+  }
   toast(`${capitalize(r.singular)} eliminado.`);
   return true;
 }
@@ -140,7 +153,9 @@ async function renderForm(root: HTMLElement, r: Resource, id: string | null) {
   }
 
   const controls: FieldControl[] = r.fields.map((f) => buildField(f,
-    f.type === 'geo' ? geoValue(row[f.latKey!], row[f.lngKey!]) : row[f.key]));
+    f.type === 'geo' ? geoValue(row[f.latKey!], row[f.lngKey!])
+    : f.type === 'gallery' ? galleryValue(row)
+    : row[f.key]));
   const formError = h('p', { class: 'field-error', role: 'alert' });
   const saveBtn = h('button', { type: 'submit', class: 'abtn abtn--primary' }, icon('check'), 'Guardar');
   let saved = false;
@@ -174,6 +189,11 @@ async function renderForm(root: HTMLElement, r: Resource, id: string | null) {
         const g = c.get() as { lat: number; lng: number } | null;
         payload[c.field.latKey!] = g?.lat ?? null;
         payload[c.field.lngKey!] = g?.lng ?? null;
+      } else if (c.field.type === 'gallery') {
+        const g = c.get() as { media: unknown[]; cover: string | null; image: string | null };
+        payload.media = g.media;
+        payload.cover = g.cover;
+        payload.image = g.image;
       } else payload[c.field.key] = c.get();
     });
     const custom = r.validate?.(payload);

@@ -5,7 +5,7 @@
 import { h, fmtDate, fmtTime, DAYS } from './dom';
 
 export type FieldType =
-  | 'text' | 'textarea' | 'number' | 'date' | 'time' | 'select' | 'checkbox' | 'list' | 'image' | 'video' | 'url' | 'geo';
+  | 'text' | 'textarea' | 'number' | 'date' | 'time' | 'select' | 'checkbox' | 'list' | 'image' | 'video' | 'url' | 'geo' | 'gallery';
 
 export interface Field {
   key: string;
@@ -59,6 +59,20 @@ const thumb = (url?: string | null) =>
         onerror: (e: Event) => (e.target as HTMLElement).replaceWith(h('span', { class: 'thumb thumb--empty', 'aria-hidden': 'true' })) })
     : h('span', { class: 'thumb thumb--empty', 'aria-hidden': 'true' });
 
+/** Miniatura de la portada (foto o video) de un registro con galería. */
+const coverThumb = (r: Row) => {
+  const item = (Array.isArray(r.media) ? r.media : []).find((m: { url: string }) => m.url === r.cover);
+  return item?.type === 'video'
+    ? h('video', { class: 'thumb', src: `${item.url}#t=0.5`, muted: true, preload: 'metadata', playsInline: true })
+    : thumb(r.cover ?? r.image);
+};
+const mediaCount = (r: Row) => {
+  const list: { type: string }[] = Array.isArray(r.media) ? r.media : r.image ? [{ type: 'image' }] : [];
+  if (!list.length) return 'Sin fotos';
+  const v = list.filter((m) => m.type === 'video').length, p = list.length - v;
+  return [p ? `${p} ${p === 1 ? 'foto' : 'fotos'}` : '', v ? `${v} ${v === 1 ? 'video' : 'videos'}` : ''].filter(Boolean).join(' · ');
+};
+
 const ICON_OPTIONS = [
   ['flame', 'Llama (jóvenes)'], ['book', 'Libro (enseñanza)'], ['sprout', 'Brote (discipulado)'],
   ['heart', 'Corazón (servicio)'], ['megaphone', 'Megáfono (evangelismo)'], ['music', 'Música (alabanza)'],
@@ -99,8 +113,9 @@ export const RESOURCES: Resource[] = [
     defaults: { icon: 'users', position: 0, leaders: [], activities: [], published: true },
     hasPublish: true,
     columns: [
-      { key: 'image', label: '', render: (r) => thumb(r.image) },
+      { key: 'image', label: '', render: (r) => coverThumb(r) },
       { key: 'name', label: 'Ministerio' },
+      { key: 'media', label: 'Galería', render: (r) => mediaCount(r) },
       { key: 'leaders', label: 'Responsables', render: (r) => (r.leaders ?? []).join(', ') || '—' },
       { key: 'position', label: 'Orden' },
     ],
@@ -112,7 +127,8 @@ export const RESOURCES: Resource[] = [
       { key: 'activities', label: 'Actividades', type: 'list', help: 'Una por línea. Ej.: Reunión · Viernes 6:00 PM' },
       { key: 'icon', label: 'Ícono', type: 'select', options: ICON_OPTIONS },
       { key: 'position', label: 'Orden de aparición', type: 'number', min: 0, max: 999 },
-      { key: 'image', label: 'Imagen representativa', type: 'image', folder: 'ministerios', full: true },
+      { key: 'media', label: 'Fotos y videos', type: 'gallery', folder: 'ministerios', full: true,
+        help: 'Sube varias fotos (JPG, PNG, WebP) y videos MP4 de hasta 50 MB. Marca con «Usar de portada» la foto o el video que se verá en la tarjeta.' },
       published,
     ],
   },

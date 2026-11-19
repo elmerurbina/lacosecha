@@ -72,7 +72,8 @@ export const getAboutSections = () =>
   fromSupabase<AboutSection>('about_sections', 'select=id,eyebrow,title,subtitle,body,list,image&order=position', seed.aboutSections);
 
 export const getMinistries = () =>
-  fromSupabase<Ministry>('ministries', 'select=id,name,summary,description,leaders,activities,icon,image&published=eq.true&order=position', seed.ministries);
+  fromSupabase<Ministry>('ministries', // select=* para que funcione antes y después de 005 (media y cover son columnas nuevas).
+    'select=*&published=eq.true&order=position', seed.ministries);
 
 export const getCellGroups = () =>
   fromSupabase<CellGroup>('cell_groups', 'select=id,title,host,description,meeting,image,lat,lng&published=eq.true&order=position', seed.cellGroups);

@@ -26,6 +26,7 @@ Sin variables de entorno el sitio usa los datos de `src/data/seed.ts` y el panel
    - `supabase/002_admin_panel.sql` — ajustes del sitio, células, métricas, bucket `media`
    - `supabase/003_seed.sql` — datos iniciales (horarios, ministerios, células, textos)
    - `supabase/004_cells_and_location.sql` — foto, título, descripción y horario de las células
+   - `supabase/005_ministry_media.sql` — varias fotos y videos por ministerio, con portada elegible
    Requiere la extensión **pg_cron** (Database → Extensions).
 3. Crea las cuentas de administración en Authentication → Users → *Add user*
    (no hay registro público) y autorízalas:

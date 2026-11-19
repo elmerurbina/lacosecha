@@ -84,6 +84,8 @@ export function buildField(field: Field, value: unknown): FieldControl {
       return mediaField(field, value as string | null, id, wrap, err);
     case 'geo':
       return geoField(field, value as GeoPoint | null, id, err, help, describedBy);
+    case 'gallery':
+      return galleryField(field, value as GalleryValue | null, id, err, help);
     default: {
       const type = field.type === 'url' ? 'url' : field.type;
       const input = h('input', {
@@ -349,6 +351,146 @@ function geoField(field: Field, initial: GeoPoint | null, id: string, err: HTMLE
     },
     replaced: () => [], uploaded: () => [], discarded: () => [],
     busy: () => watchId !== null,
+  };
+}
+
+/* ---------- Galería: varias fotos y videos con portada elegible ---------- */
+export type MediaEntry = { url: string; type: 'image' | 'video' };
+export type GalleryValue = { media: MediaEntry[]; cover: string | null };
+
+const MAX_GALLERY = 30;
+
+function galleryField(field: Field, initial: GalleryValue | null, id: string, err: HTMLElement, help: HTMLElement | null): FieldControl {
+  const original = initial?.media ?? [];
+  let items: MediaEntry[] = original.map((m) => ({ ...m }));
+  let cover: string | null = initial?.cover ?? null;
+  if (cover && !items.some((m) => m.url === cover)) cover = null;
+  let pending = 0;
+  const uploadedUrls: string[] = [];
+
+  const grid = h('ul', { class: 'gal__grid', role: 'list' });
+  const status = h('p', { class: 'gal__status', role: 'status', 'aria-live': 'polite' });
+  const input = h('input', { id, type: 'file', class: 'sr-only', multiple: true, accept: 'image/jpeg,image/png,image/webp,image/avif,video/mp4' });
+  const pick = h('label', { for: id, class: 'abtn abtn--primary abtn--sm' }, icon('upload', 16), 'Agregar fotos o videos');
+  const count = h('span', { class: 'gal__count' });
+
+  const firstImage = () => items.find((m) => m.type === 'image')?.url ?? null;
+  const effectiveCover = () => cover ?? items[0]?.url ?? null;
+
+  const move = (i: number, d: number) => {
+    const j = i + d;
+    if (j < 0 || j >= items.length) return;
+    [items[i], items[j]] = [items[j], items[i]];
+    render();
+    (grid.children[j]?.querySelector(d < 0 ? '[data-left]' : '[data-right]') as HTMLElement | null)?.focus();
+  };
+
+  function render() {
+    const cov = effectiveCover();
+    grid.replaceChildren(...items.map((m, i) => {
+      const isCover = m.url === cov;
+      const kindLabel = m.type === 'video' ? 'Video' : 'Foto';
+      const thumb = m.type === 'video'
+        ? h('video', { src: `${m.url}#t=0.5`, muted: true, preload: 'metadata', playsInline: true })
+        : h('img', { src: m.url, alt: '', loading: 'lazy' });
+      return h('li', { class: `gal__item ${isCover ? 'is-cover' : ''}` },
+        h('div', { class: 'gal__thumb' }, thumb,
+          h('span', { class: 'gal__kind' }, icon(m.type === 'video' ? 'play' : 'image', 13), kindLabel),
+          isCover ? h('span', { class: 'gal__badge' }, icon('star', 13), 'Portada') : null),
+        h('div', { class: 'gal__tools' },
+          h('button', {
+            type: 'button', class: `abtn abtn--sm ${isCover ? 'abtn--primary' : 'abtn--ghost'}`,
+            'aria-pressed': String(isCover), disabled: isCover,
+            onclick: () => { cover = m.url; render(); status.textContent = `${kindLabel} ${i + 1} elegida como portada.`; },
+          }, icon('star', 15), isCover ? 'Portada' : 'Usar de portada'),
+          h('div', { class: 'gal__icons' },
+            h('button', { type: 'button', class: 'gal__icon', 'data-left': '', 'aria-label': `Mover ${kindLabel.toLowerCase()} ${i + 1} a la izquierda`, disabled: i === 0, onclick: () => move(i, -1) }, icon('back', 16)),
+            h('button', { type: 'button', class: 'gal__icon gal__icon--flip', 'data-right': '', 'aria-label': `Mover ${kindLabel.toLowerCase()} ${i + 1} a la derecha`, disabled: i === items.length - 1, onclick: () => move(i, 1) }, icon('back', 16)),
+            h('button', {
+              type: 'button', class: 'gal__icon gal__icon--danger', 'aria-label': `Quitar ${kindLabel.toLowerCase()} ${i + 1}`,
+              onclick: () => {
+                items.splice(i, 1);
+                if (cover === m.url) cover = null;
+                render();
+                status.textContent = `${kindLabel} quitada. Guarda para aplicar el cambio.`;
+              },
+            }, icon('trash', 16)),
+          ),
+        ),
+      );
+    }), ...(pending ? Array.from({ length: pending }, () =>
+      h('li', { class: 'gal__item gal__item--loading' }, h('div', { class: 'gal__thumb' }, h('span', { class: 'spinner', 'aria-hidden': 'true' })))) : []));
+    if (!items.length && !pending) grid.replaceChildren(h('li', { class: 'gal__empty' }, icon('image', 28), h('span', null, 'Aún no hay fotos ni videos')));
+    const photos = items.filter((m) => m.type === 'image').length;
+    count.textContent = `${photos} ${photos === 1 ? 'foto' : 'fotos'} · ${items.length - photos} ${items.length - photos === 1 ? 'video' : 'videos'} · máx. ${MAX_GALLERY}`;
+  }
+
+  input.addEventListener('change', async () => {
+    const files = [...(input.files ?? [])];
+    input.value = '';
+    if (!files.length) return;
+    err.textContent = '';
+    const room = MAX_GALLERY - items.length - pending;
+    if (room <= 0) { err.textContent = `Máximo ${MAX_GALLERY} archivos por ministerio.`; return; }
+    const batch = files.slice(0, room);
+    if (files.length > room) toast(`Solo se agregarán ${room} archivo(s): el máximo es ${MAX_GALLERY}.`, 'error');
+    pending += batch.length;
+    render();
+    let ok = 0;
+    const problems: string[] = [];
+    for (const file of batch) {
+      const kind: MediaKind = file.type.startsWith('video/') ? 'video' : 'image';
+      status.textContent = `Subiendo ${ok + problems.length + 1} de ${batch.length}${kind === 'image' ? ' (optimizando imagen)' : ''}…`;
+      try {
+        const url = await uploadMedia(file, kind, field.folder ?? 'general');
+        uploadedUrls.push(url);
+        items.push({ url, type: kind });
+        ok++;
+      } catch (e) {
+        const m = e instanceof Error && !('statusCode' in e) && !('code' in e) ? e.message : friendlyError(e);
+        problems.push(`${file.name}: ${m}`);
+      } finally {
+        pending--;
+        render();
+      }
+    }
+    status.textContent = ok ? `${ok} archivo(s) listo(s). Elige la portada y guarda para aplicar los cambios.` : '';
+    if (problems.length) { err.textContent = problems.join(' · '); toast(problems[0], 'error'); }
+  });
+
+  render();
+
+  const el = h('div', { class: 'afield afield--full afield--gallery' },
+    h('p', { class: 'afield__label' }, field.label),
+    help,
+    h('div', { class: 'gal' },
+      h('div', { class: 'gal__bar' }, pick, input, count),
+      status,
+      grid,
+    ),
+    err,
+  );
+
+  const currentUrls = () => new Set(items.map((m) => m.url));
+  return {
+    field, el,
+    get: (): GalleryValue & { image: string | null } => {
+      const cov = effectiveCover();
+      const coverItem = items.find((m) => m.url === cov);
+      return {
+        media: items.map((m) => ({ url: m.url, type: m.type })),
+        cover: cov,
+        // Compatibilidad: "image" guarda la portada si es foto; si la portada es video, la primera foto.
+        image: coverItem?.type === 'image' ? coverItem.url : firstImage(),
+      };
+    },
+    focus: () => pick.focus(),
+    showError: (m) => { err.textContent = m; },
+    validate: () => (pending ? 'Espera a que terminen de subirse los archivos.' : null),
+    replaced: () => { const cur = currentUrls(); return original.map((m) => m.url).filter((u) => !cur.has(u)); },
+    uploaded: () => { const cur = currentUrls(); return uploadedUrls.filter((u) => !cur.has(u)); },
+    discarded: () => [...uploadedUrls],
+    busy: () => pending > 0,
   };
 }
 

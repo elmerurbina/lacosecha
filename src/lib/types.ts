@@ -54,6 +54,15 @@ export interface Ministry {
   activities: string[];
   icon: IconName;
   image?: string | null;
+  /** Fotos y videos del ministerio, en el orden elegido en el panel. */
+  media?: MediaItem[];
+  /** URL del archivo (foto o video) usado como portada. */
+  cover?: string | null;
+}
+
+export interface MediaItem {
+  url: string;
+  type: 'image' | 'video';
 }
 
 export interface CellGroup {
