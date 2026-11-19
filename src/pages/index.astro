@@ -5,7 +5,7 @@ import Hero from '../components/Hero.astro';
 import Icon from '../components/Icon.astro';
 import SmartImage from '../components/SmartImage.astro';
 import SectionHeading from '../components/SectionHeading.astro';
-import ScheduleList from '../components/ScheduleList.astro';
+import WeekCalendar from '../components/WeekCalendar.astro';
 import MinistryCard from '../components/MinistryCard.astro';
 import AnnouncementList from '../components/AnnouncementList.astro';
 import Gallery from '../components/Gallery.astro';
@@ -88,15 +88,15 @@ const quick = [
 
   <!-- Horarios -->
   <section class="section section--alt">
-    <div class="container two-col">
-      <div>
-        <SectionHeading eyebrow="Te esperamos" title="Horarios de culto y reuniones" lead="Ven tal como eres. Hay un lugar para ti en cada una de nuestras reuniones." />
-        <div class="two-col__actions" data-reveal>
+    <div class="container">
+      <div class="sched-head">
+        <SectionHeading eyebrow="Te esperamos" title="Horarios de culto y reuniones" lead="Ven tal como eres. Toca cualquier reunión para ver los detalles y agregarla a tu calendario." />
+        <div class="sched-head__actions" data-reveal>
           <a href="/horarios" class="btn btn--gold">Ver horarios y mapa</a>
           <a href={l.directions} class="btn btn--ghost" target="_blank" rel="noopener" data-track="maps"><Icon name="navigation" /> Cómo llegar</a>
         </div>
       </div>
-      <ScheduleList items={schedules} note={prayerNote} />
+      <WeekCalendar items={schedules} note={prayerNote} address={site.address} />
     </div>
   </section>
 
@@ -269,9 +269,9 @@ const quick = [
   .marquee__dot { width: 10px; height: 10px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 12px var(--gold); }
   @keyframes marquee { to { transform: translateX(-50%); } }
 
-  .two-col { display: grid; gap: 40px; align-items: start; }
-  @media (min-width: 960px) { .two-col { grid-template-columns: 0.85fr 1.15fr; gap: 64px; } }
-  .two-col__actions { display: flex; flex-wrap: wrap; gap: 12px; }
+  .sched-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0 32px; }
+  .sched-head__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: clamp(32px, 5vw, 52px); }
+  @media (max-width: 760px) { .sched-head__actions { margin-top: -12px; margin-bottom: 28px; } }
 
   .event__body { padding: 20px 22px 24px; }
   .event__date { display: flex; align-items: center; gap: 8px; color: var(--gold); font-weight: 700; font-size: 0.88rem; margin-bottom: 8px; }
