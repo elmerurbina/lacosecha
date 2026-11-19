@@ -2,15 +2,11 @@
 export const prerender = false;
 import Layout from '../layouts/Layout.astro';
 import PageHero from '../components/PageHero.astro';
-import SectionHeading from '../components/SectionHeading.astro';
 import MinistryCard from '../components/MinistryCard.astro';
 import Icon from '../components/Icon.astro';
-import { getCellGroups, getMinistries, getSiteInfo } from '../lib/content';
-import { coordsLink, links } from '../lib/utils';
+import { getCellGroups, getMinistries } from '../lib/content';
 
-const site = await getSiteInfo();
 const [ministries, cells] = await Promise.all([getMinistries(), getCellGroups()]);
-const l = links(site);
 ---
 <Layout title="Ministerios" description="Conoce los ministerios de la Comunidad Evangélica La Cosecha: jóvenes, discipulado, alabanza, intercesión, Programa Esperanza y más.">
   <PageHero scene="ministries"
@@ -28,44 +24,19 @@ const l = links(site);
   </section>
 
   <section class="section section--alt" id="celulas">
-    <div class="container">
-      <SectionHeading
-        eyebrow="Células"
-        title="Grupos de crecimiento"
-        lead="Nos reunimos en hogares de diferentes sectores de Juigalpa para orar, estudiar la Palabra y compartir como familia."
-      />
-      <ul class="cells">
-        {cells.map((c, i) => (
-          <li data-reveal style={`--delay: ${i * 60}ms`}>
-            <span class="cells__icon"><Icon name="users" /></span>
-            <span class="cells__host">Célula — {c.host}</span>
-            <a href={coordsLink(c.lat, c.lng)} target="_blank" rel="noopener" class="cells__map" data-track="maps">
-              <Icon name="pin" size={16} /> Ver ubicación
-            </a>
-          </li>
-        ))}
-      </ul>
-      <p class="cells__cta" data-reveal>
-        ¿Quieres unirte a una célula?
-        <a href={l.whatsapp} target="_blank" rel="noopener" data-track="whatsapp">Escríbenos por WhatsApp</a> y te conectamos con la más cercana.
-      </p>
+    <div class="container cells-teaser" data-reveal>
+      <div>
+        <p class="eyebrow">Células</p>
+        <h2>Grupos de crecimiento</h2>
+        <p class="lead">Nos reunimos en {cells.length > 0 ? `${cells.length} hogares` : 'hogares'} de diferentes sectores de Juigalpa para orar, estudiar la Palabra y compartir como familia.</p>
+      </div>
+      <a href="/celulas" class="btn btn--gold">Conoce las células <Icon name="arrow" /></a>
     </div>
   </section>
 </Layout>
 
 <style>
-  .cells { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
-  @media (min-width: 720px) { .cells { grid-template-columns: repeat(2, 1fr); } }
-  @media (min-width: 1050px) { .cells { grid-template-columns: repeat(3, 1fr); } }
-  .cells li {
-    display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: center;
-    padding: 18px 20px; border-radius: var(--radius); background: var(--surface-2); border: 1px solid var(--line);
-  }
-  .cells__icon {
-    grid-row: span 2; width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center;
-    background: var(--gold-soft); color: var(--gold);
-  }
-  .cells__host { color: var(--white); font-weight: 700; }
-  .cells__map { display: inline-flex; align-items: center; gap: 6px; font-size: 0.88rem; font-weight: 600; }
-  .cells__cta { margin-top: 28px; color: var(--muted); }
+  .cells-teaser { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 24px; }
+  .cells-teaser h2 { margin-bottom: 8px; }
+  .cells-teaser .lead { margin: 0; }
 </style>

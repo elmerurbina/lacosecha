@@ -3,7 +3,7 @@
 import HeroScene from './HeroScene.astro';
 interface Props {
   eyebrow: string; title: string; lead?: string;
-  scene?: 'about' | 'ministries' | 'schedule' | 'events' | 'sermons' | 'default';
+  scene?: 'about' | 'ministries' | 'schedule' | 'events' | 'sermons' | 'cells' | 'default';
 }
 const { eyebrow, title, lead, scene = 'default' } = Astro.props;
 ---

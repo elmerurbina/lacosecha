@@ -33,7 +33,8 @@ const l = links(site);
           <span>{site.address}<br /><span class="muted">{site.city}</span></span>
         </address>
         <div class="location__actions">
-          <a href={l.maps} class="btn btn--gold" target="_blank" rel="noopener" data-track="maps"><Icon name="navigation" /> Abrir en Google Maps</a>
+          <a href={l.directions} class="btn btn--gold" target="_blank" rel="noopener" data-track="maps"><Icon name="navigation" /> Cómo llegar</a>
+          <a href={l.maps} class="btn btn--ghost" target="_blank" rel="noopener" data-track="maps"><Icon name="pin" /> Ver en Google Maps</a>
           <a href={l.whatsapp} class="btn btn--ghost" target="_blank" rel="noopener" data-track="whatsapp"><Icon name="whatsapp" /> Pedir indicaciones</a>
         </div>
       </div>

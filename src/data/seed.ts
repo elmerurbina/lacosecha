@@ -196,11 +196,11 @@ export const ministries: Ministry[] = [
 ];
 
 export const cellGroups: CellGroup[] = [
-  { id: 'scarleth', host: 'Hna. Scarleth', lat: 12.091683, lng: -85.36199 },
-  { id: 'marquez', host: 'Hno. Márquez', lat: 12.10233, lng: -85.382252 },
-  { id: 'david', host: 'Hno. David', lat: 12.095677, lng: -85.370956 },
-  { id: 'michael-yulissa', host: 'Hnos. Michael y Yulissa', lat: 12.112887, lng: -85.376536 },
-  { id: 'dalia', host: 'Hna. Dalia', lat: 12.116288, lng: -85.372842 },
+  { id: 'scarleth', title: 'Célula Hna. Scarleth', host: 'Hna. Scarleth', lat: 12.091683, lng: -85.36199 },
+  { id: 'marquez', title: 'Célula Hno. Márquez', host: 'Hno. Márquez', lat: 12.10233, lng: -85.382252 },
+  { id: 'david', title: 'Célula Hno. David', host: 'Hno. David', lat: 12.095677, lng: -85.370956 },
+  { id: 'michael-yulissa', title: 'Célula Hnos. Michael y Yulissa', host: 'Hnos. Michael y Yulissa', lat: 12.112887, lng: -85.376536 },
+  { id: 'dalia', title: 'Célula Hna. Dalia', host: 'Hna. Dalia', lat: 12.116288, lng: -85.372842 },
 ];
 
 /** Eventos registrados. Se gestionarán desde el panel administrativo. */

@@ -17,6 +17,8 @@ export interface SiteInfo {
   social: { facebook: string; instagram: string; tiktok: string };
   heroImage?: string | null;
   logo?: string | null;
+  /** Coordenadas exactas del templo (se capturan con el GPS desde el panel). */
+  location?: { lat: number; lng: number } | null;
 }
 
 export interface Schedule {
@@ -56,9 +58,14 @@ export interface Ministry {
 
 export interface CellGroup {
   id: string;
+  title?: string | null;
   host: string;
-  lat: number;
-  lng: number;
+  description?: string | null;
+  /** Día y hora de reunión, texto libre (ej.: "Jueves · 7:00 PM") */
+  meeting?: string | null;
+  image?: string | null;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export interface ChurchEvent {

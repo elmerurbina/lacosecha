@@ -4,7 +4,7 @@
  */
 import { sb, friendlyError } from '../sb';
 import { h, icon, toast, confirmDialog, loading, emptyState, errorState, slugify } from '../dom';
-import { buildField, validateAll, cleanupMedia, type FieldControl } from '../fields';
+import { buildField, validateAll, cleanupMedia, geoValue, type FieldControl } from '../fields';
 import { removeMedia } from '../upload';
 import type { Resource, Row } from '../resources';
 
@@ -139,7 +139,8 @@ async function renderForm(root: HTMLElement, r: Resource, id: string | null) {
     row = data as Row;
   }
 
-  const controls: FieldControl[] = r.fields.map((f) => buildField(f, row[f.key]));
+  const controls: FieldControl[] = r.fields.map((f) => buildField(f,
+    f.type === 'geo' ? geoValue(row[f.latKey!], row[f.lngKey!]) : row[f.key]));
   const formError = h('p', { class: 'field-error', role: 'alert' });
   const saveBtn = h('button', { type: 'submit', class: 'abtn abtn--primary' }, icon('check'), 'Guardar');
   let saved = false;
@@ -168,7 +169,13 @@ async function renderForm(root: HTMLElement, r: Resource, id: string | null) {
     formError.textContent = '';
     if (!validateAll(controls)) { formError.textContent = 'Revisa los campos marcados.'; return; }
     const payload: Row = {};
-    controls.forEach((c) => { payload[c.field.key] = c.get(); });
+    controls.forEach((c) => {
+      if (c.field.type === 'geo') {
+        const g = c.get() as { lat: number; lng: number } | null;
+        payload[c.field.latKey!] = g?.lat ?? null;
+        payload[c.field.lngKey!] = g?.lng ?? null;
+      } else payload[c.field.key] = c.get();
+    });
     const custom = r.validate?.(payload);
     if (custom) { formError.textContent = custom; return; }
 

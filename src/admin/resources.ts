@@ -5,7 +5,7 @@
 import { h, fmtDate, fmtTime, DAYS } from './dom';
 
 export type FieldType =
-  | 'text' | 'textarea' | 'number' | 'date' | 'time' | 'select' | 'checkbox' | 'list' | 'image' | 'video' | 'url';
+  | 'text' | 'textarea' | 'number' | 'date' | 'time' | 'select' | 'checkbox' | 'list' | 'image' | 'video' | 'url' | 'geo';
 
 export interface Field {
   key: string;
@@ -21,6 +21,9 @@ export interface Field {
   folder?: string;
   pattern?: string;
   full?: boolean;
+  /** Solo para type "geo": columnas donde se guardan latitud y longitud. */
+  latKey?: string;
+  lngKey?: string;
 }
 
 export interface Column {
@@ -115,21 +118,28 @@ export const RESOURCES: Resource[] = [
   },
   {
     path: 'celulas', table: 'cell_groups', title: 'Células', singular: 'célula', icon: 'pin',
-    description: 'Grupos de crecimiento en hogares. La ubicación se muestra como enlace a Google Maps.',
-    idType: 'slug', slugFrom: 'host',
+    description: 'Grupos de crecimiento en hogares. Se muestran en la página «Células» con su foto, descripción y ubicación.',
+    idType: 'slug', slugFrom: 'title',
     order: [{ column: 'position', ascending: true }],
-    search: ['host'],
+    search: ['title', 'host'],
     defaults: { position: 0, published: true },
     hasPublish: true,
     columns: [
+      { key: 'image', label: '', render: (r) => thumb(r.image) },
+      { key: 'title', label: 'Célula', render: (r) => r.title || `Célula ${r.host}` },
       { key: 'host', label: 'Anfitrión' },
-      { key: 'lat', label: 'Ubicación', render: (r) => h('a', { href: `https://www.google.com/maps/search/?api=1&query=${Number(r.lat)},${Number(r.lng)}`, target: '_blank', rel: 'noopener' }, 'Ver en mapa') },
+      { key: 'lat', label: 'Ubicación', render: (r) => (r.lat === null || r.lng === null ? 'Sin ubicación'
+        : h('a', { href: `https://www.google.com/maps/search/?api=1&query=${Number(r.lat)},${Number(r.lng)}`, target: '_blank', rel: 'noopener' }, 'Ver en mapa')) },
     ],
     fields: [
-      { key: 'host', label: 'Anfitrión (ej.: Hna. Dalia)', type: 'text', required: true, max: 80, full: true },
-      { key: 'lat', label: 'Latitud', type: 'number', required: true, min: -90, max: 90, step: 'any', placeholder: '12.10' },
-      { key: 'lng', label: 'Longitud', type: 'number', required: true, min: -180, max: 180, step: 'any', placeholder: '-85.37', help: 'En Google Maps: clic derecho sobre el punto → copiar coordenadas.' },
-      { key: 'position', label: 'Orden', type: 'number', min: 0, max: 999 },
+      { key: 'title', label: 'Título (ej.: Célula Hna. Dalia)', type: 'text', required: true, max: 100, full: true },
+      { key: 'host', label: 'Anfitrión (ej.: Hna. Dalia)', type: 'text', required: true, max: 80 },
+      { key: 'meeting', label: 'Día y hora de reunión (opcional)', type: 'text', max: 80, placeholder: 'Jueves · 7:00 PM' },
+      { key: 'description', label: 'Descripción', type: 'textarea', max: 1200, full: true, help: 'Qué hacen, a quién está dirigida, referencias del barrio…' },
+      { key: 'image', label: 'Foto de la célula', type: 'image', folder: 'celulas', full: true },
+      { key: 'geo', label: 'Ubicación del hogar', type: 'geo', latKey: 'lat', lngKey: 'lng', full: true,
+        help: 'Lo más exacto: estando en la casa, toca «Usar mi ubicación actual» desde el teléfono.' },
+      { key: 'position', label: 'Orden de aparición', type: 'number', min: 0, max: 999 },
       published,
     ],
   },

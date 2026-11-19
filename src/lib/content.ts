@@ -75,7 +75,7 @@ export const getMinistries = () =>
   fromSupabase<Ministry>('ministries', 'select=id,name,summary,description,leaders,activities,icon,image&published=eq.true&order=position', seed.ministries);
 
 export const getCellGroups = () =>
-  fromSupabase<CellGroup>('cell_groups', 'select=id,host,lat,lng&published=eq.true&order=position', seed.cellGroups);
+  fromSupabase<CellGroup>('cell_groups', 'select=id,title,host,description,meeting,image,lat,lng&published=eq.true&order=position', seed.cellGroups);
 
 export const getEvents = () =>
   fromSupabase<ChurchEvent>('events', 'select=id,title,description,date,time,location,image&published=eq.true&order=date', seed.events)

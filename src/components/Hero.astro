@@ -34,7 +34,7 @@ const l = links(site);
     </blockquote>
     <div class="hero__cta anim" style="--d: 0.7s">
       <a href="/horarios" class="btn btn--gold"><Icon name="clock" /> Horarios de culto</a>
-      <a href={l.maps} class="btn btn--ghost" target="_blank" rel="noopener" data-track="maps"><Icon name="pin" /> Cómo llegar</a>
+      <a href={l.directions} class="btn btn--ghost" target="_blank" rel="noopener" data-track="maps"><Icon name="pin" /> Cómo llegar</a>
       <a href={l.whatsapp} class="btn btn--ghost" target="_blank" rel="noopener" data-track="whatsapp"><Icon name="whatsapp" /> WhatsApp</a>
     </div>
   </div>
@@ -99,6 +99,12 @@ const l = links(site);
   }
   .hero__motto cite { display: block; margin-top: 6px; font-family: var(--font-body); font-style: normal; font-size: 0.8rem; letter-spacing: 0.12em; color: var(--gold); }
   .hero__cta { display: flex; flex-wrap: wrap; gap: 12px; }
+  /* Respuesta inmediata al pasar el puntero: transición corta y sin desenfoque de fondo
+     (backdrop-filter obliga a repintar y hace que el hover se sienta lento). */
+  .hero__cta :global(.btn) { transition-duration: 0.07s; will-change: transform; }
+  .hero__cta :global(.btn--ghost) { backdrop-filter: none; background: rgba(10, 10, 10, 0.55); }
+  .hero__cta :global(.btn:hover) { transform: translateY(-3px); }
+  .hero__cta :global(.btn--ghost:hover) { background: rgba(227, 169, 43, 0.14); }
 
   .hero__scroll {
     position: absolute; left: 50%; bottom: 24px; translate: -50% 0;

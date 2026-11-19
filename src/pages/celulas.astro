@@ -1,0 +1,61 @@
+---
+export const prerender = false;
+import Layout from '../layouts/Layout.astro';
+import PageHero from '../components/PageHero.astro';
+import CellCard from '../components/CellCard.astro';
+import Icon from '../components/Icon.astro';
+import { getCellGroups, getSiteInfo } from '../lib/content';
+import { links } from '../lib/utils';
+
+const site = await getSiteInfo();
+const cells = await getCellGroups();
+const l = links(site);
+---
+<Layout title="Células" description="Células o grupos de crecimiento de la Comunidad Evangélica La Cosecha en hogares de Juigalpa: encuentra la más cercana a tu casa.">
+  <PageHero
+    scene="cells"
+    eyebrow="Células · Grupos de crecimiento"
+    title="La iglesia también se reúne en casa"
+    lead="Nos reunimos en hogares de diferentes sectores de Juigalpa para orar, estudiar la Palabra y compartir como familia."
+  />
+
+  <section class="section">
+    <div class="container">
+      {cells.length > 0 ? (
+        <div class="grid grid--3">
+          {cells.map((c, i) => <CellCard cell={c} index={i} />)}
+        </div>
+      ) : (
+        <div class="empty" data-reveal>
+          <p>Pronto publicaremos nuestras células.</p>
+          <p class="muted">Escríbenos y te conectamos con la más cercana.</p>
+        </div>
+      )}
+    </div>
+  </section>
+
+  <section class="section section--alt">
+    <div class="container join" data-reveal>
+      <span class="join__icon"><Icon name="users" size={30} /></span>
+      <p class="join__text">
+        <strong>¿Quieres unirte a una célula?</strong><br />
+        <a href={l.whatsapp} target="_blank" rel="noopener" data-track="whatsapp">Escríbenos por WhatsApp</a> y te conectamos con la más cercana.
+      </p>
+      <a href={l.whatsapp} target="_blank" rel="noopener" class="btn btn--gold" data-track="whatsapp"><Icon name="whatsapp" /> Quiero unirme</a>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .join {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 20px 28px;
+    padding: clamp(24px, 4vw, 40px); border-radius: var(--radius-lg);
+    background: var(--surface-2); border: 1px solid var(--line-gold);
+  }
+  .join__icon {
+    width: 64px; height: 64px; flex: none; border-radius: 18px; display: grid; place-items: center;
+    background: var(--gold-soft); color: var(--gold);
+  }
+  .join__text { flex: 1 1 280px; margin: 0; color: var(--muted); font-size: 1.08rem; }
+  .join__text strong { color: var(--white); font-family: var(--font-display); font-size: 1.35rem; font-weight: 600; }
+</style>

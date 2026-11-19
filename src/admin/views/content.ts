@@ -30,6 +30,8 @@ const SETTINGS_FIELDS: { title: string; fields: Field[] }[] = [
       { key: 'email', label: 'Correo institucional', type: 'text', required: true, max: 120, pattern: '^[^\\s@]+@[^\\s@]+\\.[^\\s@]{2,}$' },
       { key: 'city', label: 'Ciudad', type: 'text', max: 80 },
       { key: 'address', label: 'Dirección de referencia', type: 'textarea', required: true, max: 300, full: true },
+      { key: 'location', label: 'Punto exacto del templo en el mapa', type: 'geo', full: true,
+        help: 'Estando dentro del templo, abre este panel en el teléfono y toca «Usar mi ubicación actual». Así «Cómo llegar» y el mapa del sitio marcan la dirección exacta.' },
       { key: 'prayerNote', label: 'Nota de oración y ayuno (se muestra bajo los horarios)', type: 'text', max: 160, full: true },
     ],
   },

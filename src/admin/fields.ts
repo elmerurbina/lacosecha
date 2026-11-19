@@ -82,6 +82,8 @@ export function buildField(field: Field, value: unknown): FieldControl {
     case 'image':
     case 'video':
       return mediaField(field, value as string | null, id, wrap, err);
+    case 'geo':
+      return geoField(field, value as GeoPoint | null, id, err, help, describedBy);
     default: {
       const type = field.type === 'url' ? 'url' : field.type;
       const input = h('input', {
@@ -180,6 +182,173 @@ function mediaField(field: Field, initial: string | null, id: string, wrap: (c: 
     uploaded: () => uploadedUrls.filter((u) => u !== current),
     discarded: () => [...uploadedUrls],
     busy: () => uploading,
+  };
+}
+
+/* ---------- Ubicación (latitud/longitud) con GPS del teléfono ---------- */
+export type GeoPoint = { lat: number; lng: number };
+
+export function geoValue(lat: unknown, lng: unknown): GeoPoint | null {
+  if (lat === null || lat === undefined || lng === null || lng === undefined || lat === '' || lng === '') return null;
+  const p = { lat: Number(lat), lng: Number(lng) };
+  return Number.isFinite(p.lat) && Number.isFinite(p.lng) ? p : null;
+}
+
+/** Extrae coordenadas de "12.09, -85.36" o de un enlace de Google Maps (@lat,lng · q=lat,lng · !3dlat!4dlng). */
+export function parseCoords(text: string): GeoPoint | null {
+  let t = text.trim();
+  try { t = decodeURIComponent(t); } catch { /* texto no codificado */ }
+  const num = String.raw`(-?\d+(?:\.\d+)?)`;
+  const pats = [
+    new RegExp(String.raw`!3d${num}!4d${num}`),
+    new RegExp(String.raw`@${num},\s*${num}`),
+    new RegExp(String.raw`[?&](?:q|query|destination|ll)=${num},\s*${num}`),
+    new RegExp(String.raw`^${num}\s*[,\s]\s*${num}$`),
+  ];
+  for (const re of pats) {
+    const m = t.match(re);
+    if (m) {
+      const p = { lat: Number(m[1]), lng: Number(m[2]) };
+      if (Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180) return p;
+    }
+  }
+  return null;
+}
+
+const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
+
+function geoField(field: Field, initial: GeoPoint | null, id: string, err: HTMLElement, help: HTMLElement | null, describedBy: string): FieldControl {
+  const latIn = h('input', { id, type: 'number', step: 'any', min: -90, max: 90, placeholder: '12.104512', inputmode: 'decimal', 'aria-describedby': describedBy });
+  const lngIn = h('input', { id: `${id}-lng`, type: 'number', step: 'any', min: -180, max: 180, placeholder: '-85.369871', inputmode: 'decimal', 'aria-describedby': describedBy });
+  const pasteIn = h('input', { id: `${id}-paste`, type: 'text', placeholder: 'Pega coordenadas o un enlace de Google Maps', autocomplete: 'off' });
+  const status = h('p', { class: 'geo__status', role: 'status', 'aria-live': 'polite' });
+  const frame = h('iframe', { class: 'geo__map', title: 'Vista previa de la ubicación', loading: 'lazy', referrerpolicy: 'no-referrer-when-downgrade' });
+  const empty = h('div', { class: 'geo__empty' }, icon('pin', 26), h('span', null, 'Sin ubicación todavía'));
+  const openLink = h('a', { class: 'abtn abtn--ghost abtn--sm', target: '_blank', rel: 'noopener' }, icon('external', 16), 'Abrir en Google Maps');
+  const gpsLabel = h('span', null, 'Usar mi ubicación actual');
+  const gpsBtn = h('button', { type: 'button', class: 'abtn abtn--primary abtn--sm' }, icon('pin', 16), gpsLabel);
+  const clearBtn = h('button', { type: 'button', class: 'abtn abtn--ghost abtn--sm' }, icon('trash', 16), 'Quitar');
+
+  const read = (): GeoPoint | null => geoValue(latIn.value.trim(), lngIn.value.trim());
+
+  let timer = 0;
+  const paint = () => {
+    const p = read();
+    const ok = !!p && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180;
+    frame.hidden = !ok; empty.hidden = ok; openLink.hidden = !ok; clearBtn.hidden = !ok;
+    if (ok && p) {
+      const src = `https://maps.google.com/maps?q=${p.lat},${p.lng}&z=18&output=embed`;
+      if (frame.getAttribute('src') !== src) frame.setAttribute('src', src);
+      openLink.href = `https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}`;
+    }
+  };
+  const refresh = () => { clearTimeout(timer); timer = window.setTimeout(paint, 350); };
+  const set = (p: GeoPoint | null) => {
+    latIn.value = p ? String(round6(p.lat)) : '';
+    lngIn.value = p ? String(round6(p.lng)) : '';
+    paint();
+  };
+
+  latIn.addEventListener('input', refresh);
+  lngIn.addEventListener('input', refresh);
+  pasteIn.addEventListener('input', () => {
+    const p = parseCoords(pasteIn.value);
+    if (p) {
+      set(p);
+      pasteIn.value = '';
+      err.textContent = '';
+      status.textContent = 'Coordenadas tomadas del texto pegado. Revisa el punto en el mapa y guarda.';
+    }
+  });
+  clearBtn.addEventListener('click', () => { set(null); status.textContent = ''; });
+
+  // GPS: se escuchan varias lecturas durante unos segundos y se conserva la más precisa.
+  let watchId: number | null = null;
+  let stopTimer = 0;
+  let best: GeolocationPosition | null = null;
+  const stop = (failMsg?: string) => {
+    if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    clearTimeout(stopTimer);
+    gpsBtn.disabled = false;
+    gpsLabel.textContent = 'Usar mi ubicación actual';
+    if (best) {
+      set({ lat: best.coords.latitude, lng: best.coords.longitude });
+      const acc = Math.round(best.coords.accuracy);
+      status.textContent = `Ubicación capturada (precisión ±${acc} m). Revisa el punto en el mapa y guarda.`
+        + (acc > 30 ? ' La señal fue débil: si el punto no está bien, inténtalo de nuevo al aire libre.' : '');
+    } else if (failMsg) {
+      err.textContent = failMsg;
+      status.textContent = '';
+    }
+  };
+
+  gpsBtn.addEventListener('click', () => {
+    err.textContent = '';
+    if (!('geolocation' in navigator)) { err.textContent = 'Este dispositivo no permite obtener la ubicación.'; return; }
+    if (!window.isSecureContext) { err.textContent = 'La ubicación solo funciona en una conexión segura (https).'; return; }
+    best = null;
+    gpsBtn.disabled = true;
+    gpsLabel.textContent = 'Buscando señal GPS…';
+    status.textContent = 'Buscando tu ubicación… Mantente quieto, de preferencia al aire libre o cerca de una ventana.';
+    watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        if (!best || pos.coords.accuracy < best.coords.accuracy) best = pos;
+        const acc = Math.round(best.coords.accuracy);
+        status.textContent = `Afinando la ubicación… precisión actual ±${acc} m`;
+        if (acc <= 10) stop();
+      },
+      (e) => {
+        stop(e.code === e.PERMISSION_DENIED
+          ? 'Permiso de ubicación denegado. Actívalo para este sitio en los ajustes del navegador e inténtalo de nuevo.'
+          : e.code === e.TIMEOUT
+            ? 'No se obtuvo señal a tiempo. Inténtalo de nuevo al aire libre.'
+            : 'No se pudo obtener la ubicación. Verifica que el GPS del teléfono esté encendido.');
+      },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 30000 },
+    );
+    // Como máximo 20 s: se usa la mejor lectura obtenida hasta entonces.
+    stopTimer = window.setTimeout(() => stop('No se obtuvo señal GPS. Inténtalo de nuevo al aire libre.'), 20000);
+  });
+
+  const el = h('div', { class: 'afield afield--full afield--geo' },
+    h('p', { class: 'afield__label' }, field.label, field.required ? h('span', { class: 'req', 'aria-hidden': 'true' }, ' *') : null),
+    help,
+    h('div', { class: 'geo' },
+      h('div', { class: 'geo__preview' }, frame, empty),
+      h('div', { class: 'geo__controls' },
+        h('div', { class: 'geo__actions' }, gpsBtn, openLink, clearBtn),
+        status,
+        h('div', { class: 'geo__inputs' },
+          h('div', null, h('label', { for: id }, 'Latitud'), latIn),
+          h('div', null, h('label', { for: `${id}-lng` }, 'Longitud'), lngIn)),
+        h('div', { class: 'geo__paste' },
+          h('label', { for: `${id}-paste` }, 'O pega desde Google Maps'), pasteIn,
+          h('p', { class: 'field-help' }, 'En Google Maps mantén presionado el punto exacto y copia las coordenadas o el enlace.')),
+      ),
+    ),
+    err,
+  );
+  set(initial);
+
+  return {
+    field, el,
+    get: () => { const p = read(); return p ? { lat: round6(p.lat), lng: round6(p.lng) } : null; },
+    focus: () => gpsBtn.focus(),
+    showError: (m) => { err.textContent = m; },
+    validate: () => {
+      if (watchId !== null) return 'Espera a que termine la búsqueda de GPS.';
+      const a = latIn.value.trim(), b = lngIn.value.trim();
+      if (!a && !b) return field.required ? 'Indica la ubicación.' : null;
+      if (!a || !b) return 'Completa latitud y longitud.';
+      const p = read();
+      if (!p) return 'Las coordenadas no son válidas.';
+      if (Math.abs(p.lat) > 90) return 'La latitud debe estar entre -90 y 90.';
+      if (Math.abs(p.lng) > 180) return 'La longitud debe estar entre -180 y 180.';
+      return null;
+    },
+    replaced: () => [], uploaded: () => [], discarded: () => [],
+    busy: () => watchId !== null,
   };
 }
 
