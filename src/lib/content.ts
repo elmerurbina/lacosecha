@@ -1,17 +1,15 @@
 /**
  * Capa de acceso a contenido.
  *
- * Si las variables PUBLIC_SUPABASE_URL y PUBLIC_SUPABASE_ANON_KEY están definidas,
- * el contenido publicado se obtiene de Supabase (PostgREST, protegido por RLS).
+ * Si las variables SUPABASE_URL y SUPABASE_ANON_KEY están definidas (ver `env` en
+ * astro.config.mjs), el contenido publicado se obtiene de Supabase (PostgREST, protegido por RLS).
  * Si no están definidas o la consulta falla, se usan los datos de `src/data/seed.ts`.
  */
+import { SUPABASE_URL, SUPABASE_ANON_KEY as SUPABASE_KEY } from 'astro:env/client';
 import * as seed from '../data/seed';
 import type {
   AboutSection, Announcement, ChurchEvent, GalleryItem, Ministry, Schedule, Sermon, SiteInfo,
 } from './types';
-
-const SUPABASE_URL = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
-const SUPABASE_KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
 
 export const supabaseEnabled = Boolean(SUPABASE_URL && SUPABASE_KEY);
 

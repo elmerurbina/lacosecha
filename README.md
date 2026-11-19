@@ -21,5 +21,5 @@ npm run build
 
 ## Supabase
 
-Copia `.env.example` a `.env` y completa `PUBLIC_SUPABASE_URL` y `PUBLIC_SUPABASE_ANON_KEY`.
+Copia `.env.example` a `.env` y completa `SUPABASE_URL` y `SUPABASE_ANON_KEY`.
 Ejecuta `supabase/schema.sql` en el SQL Editor. Nunca uses la `service_role` key en este proyecto.

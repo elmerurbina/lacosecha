@@ -4,8 +4,7 @@
  * definidas en `supabase/schema.sql` (inserción permitida, lectura denegada).
  * Nunca colocar aquí la service_role key.
  */
-const URL = import.meta.env.PUBLIC_SUPABASE_URL as string | undefined;
-const KEY = import.meta.env.PUBLIC_SUPABASE_ANON_KEY as string | undefined;
+import { SUPABASE_URL as URL, SUPABASE_ANON_KEY as KEY } from 'astro:env/client';
 
 export const isConfigured = Boolean(URL && KEY);
 
