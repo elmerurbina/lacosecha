@@ -1,33 +1,49 @@
 ---
-/** Encabezado para páginas interiores. */
-import Wheat from './Wheat.astro';
-interface Props { eyebrow: string; title: string; lead?: string }
-const { eyebrow, title, lead } = Astro.props;
+/** Encabezado para páginas interiores, con escena animada de fondo según la página. */
+import HeroScene from './HeroScene.astro';
+interface Props {
+  eyebrow: string; title: string; lead?: string;
+  scene?: 'about' | 'ministries' | 'schedule' | 'events' | 'sermons' | 'default';
+}
+const { eyebrow, title, lead, scene = 'default' } = Astro.props;
 ---
 <section class="page-hero">
-  <Wheat class="page-hero__wheat" />
-  <div class="container">
-    <p class="eyebrow" data-reveal>{eyebrow}</p>
-    <h1 data-reveal style="--delay: 80ms">{title}</h1>
-    {lead && <p class="lead" data-reveal style="--delay: 160ms">{lead}</p>}
-    <slot />
+  <HeroScene variant={scene} />
+  <div class="container page-hero__content">
+    <p class="eyebrow page-hero__in" style="--d: 0.05s">{eyebrow}</p>
+    <h1 class="page-hero__in" style="--d: 0.18s">{title}</h1>
+    {lead && <p class="lead page-hero__in" style="--d: 0.32s">{lead}</p>}
+    <div class="page-hero__in" style="--d: 0.45s"><slot /></div>
   </div>
+  <span class="page-hero__line" aria-hidden="true"></span>
 </section>
 
 <style>
   .page-hero {
-    position: relative; overflow: hidden;
+    position: relative; overflow: hidden; isolation: isolate;
     padding: calc(var(--header-h) + clamp(56px, 9vw, 110px)) 0 clamp(48px, 7vw, 80px);
     background:
-      radial-gradient(ellipse at 85% 0%, rgba(227, 169, 43, 0.18), transparent 55%),
+      radial-gradient(ellipse at 85% 0%, rgba(227, 169, 43, 0.14), transparent 55%),
       linear-gradient(180deg, #14120e 0%, var(--black) 100%);
-    border-bottom: 1px solid var(--line);
   }
+  .page-hero__content { position: relative; z-index: 1; }
   .page-hero h1 { max-width: 18ch; }
-  .page-hero :global(.page-hero__wheat) {
-    position: absolute; right: -40px; bottom: -60px;
-    width: clamp(220px, 34vw, 420px); height: auto;
-    color: var(--gold); opacity: 0.07; transform: rotate(18deg);
-    pointer-events: none;
+  .page-hero .lead { max-width: 58ch; }
+
+  /* Entrada del texto: sube y se desenfoca hacia nítido. */
+  .page-hero__in { animation: ph-in 1.1s var(--ease) both; animation-delay: var(--d); }
+  @keyframes ph-in {
+    from { opacity: 0; transform: translateY(26px); filter: blur(6px); }
+    to { opacity: 1; transform: none; filter: none; }
   }
+
+  /* Línea dorada inferior que recorre el borde. */
+  .page-hero__line {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 1px; z-index: 1;
+    background: linear-gradient(90deg, transparent, var(--gold) 50%, transparent) no-repeat,
+      var(--line);
+    background-size: 40% 100%, 100% 100%;
+    animation: ph-line 6s ease-in-out infinite;
+  }
+  @keyframes ph-line { from { background-position: -60% 0, 0 0; } to { background-position: 160% 0, 0 0; } }
 </style>

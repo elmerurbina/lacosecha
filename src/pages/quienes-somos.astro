@@ -14,7 +14,7 @@ const leaders = [
 ];
 ---
 <Layout title="Quiénes somos" description={`Historia, misión, visión, valores y liderazgo de la ${site.name} en Juigalpa, Chontales.`}>
-  <PageHero eyebrow="Quiénes somos" title="Una comunidad de fe en Juigalpa" lead={site.description}>
+  <PageHero scene="about" eyebrow="Quiénes somos" title="Una comunidad de fe en Juigalpa" lead={site.description}>
     <nav class="about-nav" aria-label="Secciones de Quiénes somos" data-reveal style="--delay: 240ms">
       {sections.map((s) => <a href={`#${s.id}`}>{s.eyebrow}</a>)}
     </nav>

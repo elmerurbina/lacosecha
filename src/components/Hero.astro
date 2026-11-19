@@ -2,7 +2,7 @@
 /** Hero de inicio (RF-01): imagen configurable, frase, lema, CTAs y accesos rápidos. */
 import Icon from './Icon.astro';
 import SmartImage from './SmartImage.astro';
-import Wheat from './Wheat.astro';
+import HeroScene from './HeroScene.astro';
 import type { SiteInfo } from '../lib/types';
 import { links } from '../lib/utils';
 
@@ -14,8 +14,8 @@ const l = links(site);
   <div class="hero__bg">
     <SmartImage src={site.heroImage} alt="" variant="plain" ratio="auto" eager class="hero__img" />
     <div class="hero__shade"></div>
-    <Wheat class="hero__wheat hero__wheat--a" />
-    <Wheat class="hero__wheat hero__wheat--b" />
+    <HeroScene variant="home" embers={30} />
+    <span class="hero__ray" aria-hidden="true"></span>
   </div>
 
   <div class="container hero__content">
@@ -58,9 +58,13 @@ const l = links(site);
       linear-gradient(90deg, rgba(10, 10, 10, 0.92) 0%, rgba(10, 10, 10, 0.65) 55%, rgba(10, 10, 10, 0.35) 100%),
       linear-gradient(to top, var(--black) 0%, transparent 40%);
   }
-  .hero :global(.hero__wheat) { position: absolute; color: var(--gold); pointer-events: none; }
-  .hero :global(.hero__wheat--a) { right: 6%; top: 18%; width: clamp(160px, 22vw, 320px); opacity: 0.16; transform: rotate(14deg); animation: sway 9s ease-in-out infinite; }
-  .hero :global(.hero__wheat--b) { right: 22%; bottom: 6%; width: clamp(90px, 11vw, 170px); opacity: 0.1; transform: rotate(-12deg); animation: sway 11s ease-in-out infinite reverse; }
+  /* Haz de luz diagonal que cruza lentamente la portada. */
+  .hero__ray {
+    position: absolute; top: -30%; bottom: -30%; width: 34%; left: -40%;
+    background: linear-gradient(90deg, transparent, rgba(244, 201, 93, 0.12), transparent);
+    transform: skewX(-18deg); animation: hero-ray 11s ease-in-out infinite; mix-blend-mode: screen;
+  }
+  @keyframes hero-ray { 0% { left: -40%; } 55%, 100% { left: 120%; } }
 
   .hero__content { position: relative; }
   .hero__kicker {
@@ -70,9 +74,16 @@ const l = links(site);
     background: rgba(10, 10, 10, 0.4); margin-bottom: 26px;
   }
   .hero h1 { max-width: 14ch; margin-bottom: 22px; }
-  .hero h1 em { font-style: italic; color: var(--gold); }
+  .hero h1 em {
+    font-style: italic; color: var(--gold);
+    background: linear-gradient(100deg, var(--gold-dark) 0%, var(--gold) 30%, #fff1c7 50%, var(--gold) 70%, var(--gold-dark) 100%);
+    background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    animation: shimmer 6s ease-in-out infinite;
+  }
+  @keyframes shimmer { 0%, 100% { background-position: 100% 0; } 50% { background-position: 0 0; } }
   .hero__lead { font-size: clamp(1.1rem, 1.8vw, 1.3rem); max-width: 54ch; color: var(--text); margin-bottom: 26px; }
   .hero__motto {
+    position: relative;
     margin: 0 0 36px; padding-left: 18px; border-left: 2px solid var(--gold);
     font-family: var(--font-display); font-style: italic; font-size: clamp(1.05rem, 1.6vw, 1.25rem);
     color: var(--white); max-width: 46ch;
@@ -89,7 +100,6 @@ const l = links(site);
   .anim { animation: rise 1s var(--ease) both; animation-delay: var(--d, 0s); }
   @keyframes rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: none; } }
   @keyframes hero-zoom { from { transform: scale(1.08); } to { transform: scale(1); } }
-  @keyframes sway { 0%, 100% { rotate: 0deg; } 50% { rotate: 4deg; } }
   @keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
 
   @media (max-width: 560px) {

@@ -13,7 +13,7 @@ const [schedules, prayerNote] = await Promise.all([getSchedules(), getPrayerNote
 const l = links(site);
 ---
 <Layout title="Horarios y ubicación" description={`Horarios de culto y reuniones de la ${site.name}. Dirección: ${site.address}.`}>
-  <PageHero eyebrow="Horarios y ubicación" title="Te esperamos con los brazos abiertos" lead="Consulta nuestros días de culto y reuniones, y encuentra cómo llegar." />
+  <PageHero scene="schedule" eyebrow="Horarios y ubicación" title="Te esperamos con los brazos abiertos" lead="Consulta nuestros días de culto y reuniones, y encuentra cómo llegar." />
 
   <section class="section">
     <div class="container">
