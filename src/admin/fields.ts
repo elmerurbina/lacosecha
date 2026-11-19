@@ -215,7 +215,7 @@ export function parseCoords(text: string): GeoPoint | null {
   return null;
 }
 
-const round6 = (n: number) => Math.round(n * 1e6) / 1e6;
+const roundCoord = (n: number) => Math.round(n * 1e9) / 1e9;
 
 function geoField(field: Field, initial: GeoPoint | null, id: string, err: HTMLElement, help: HTMLElement | null, describedBy: string): FieldControl {
   const latIn = h('input', { id, type: 'number', step: 'any', min: -90, max: 90, placeholder: '12.104512', inputmode: 'decimal', 'aria-describedby': describedBy });
@@ -244,8 +244,8 @@ function geoField(field: Field, initial: GeoPoint | null, id: string, err: HTMLE
   };
   const refresh = () => { clearTimeout(timer); timer = window.setTimeout(paint, 350); };
   const set = (p: GeoPoint | null) => {
-    latIn.value = p ? String(round6(p.lat)) : '';
-    lngIn.value = p ? String(round6(p.lng)) : '';
+    latIn.value = p ? String(roundCoord(p.lat)) : '';
+    lngIn.value = p ? String(roundCoord(p.lng)) : '';
     paint();
   };
 
@@ -333,7 +333,7 @@ function geoField(field: Field, initial: GeoPoint | null, id: string, err: HTMLE
 
   return {
     field, el,
-    get: () => { const p = read(); return p ? { lat: round6(p.lat), lng: round6(p.lng) } : null; },
+    get: () => { const p = read(); return p ? { lat: roundCoord(p.lat), lng: roundCoord(p.lng) } : null; },
     focus: () => gpsBtn.focus(),
     showError: (m) => { err.textContent = m; },
     validate: () => {

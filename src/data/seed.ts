@@ -44,6 +44,8 @@ export const siteInfo: SiteInfo = {
   },
   heroImage: '/images/galeria/hero.jpg',
   logo: '/logo.png',
+  // Punto exacto del templo (Plus Code 4J6J+73V, Juigalpa). Se puede actualizar desde el panel.
+  location: { lat: 12.110783754920698, lng: -85.36966172679871 },
 };
 
 export const schedules: Schedule[] = [

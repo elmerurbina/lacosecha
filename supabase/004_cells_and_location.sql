@@ -36,3 +36,8 @@ update public.cell_groups set title = 'Célula ' || host where title is null;
 -- ---------- Ubicación exacta de la iglesia ----------
 -- No requiere cambios de esquema: se guarda en site_settings.data -> 'location' = {"lat": ..., "lng": ...}
 -- desde el panel (Información institucional → Contacto y ubicación → «Usar mi ubicación actual»).
+
+-- Punto exacto del templo (Plus Code 4J6J+73V, Juigalpa). Solo se aplica si aún no hay uno guardado.
+update public.site_settings
+   set data = jsonb_set(coalesce(data, '{}'::jsonb), '{location}', '{"lat": 12.110783754920698, "lng": -85.36966172679871}'::jsonb)
+ where id = 1 and not (coalesce(data, '{}'::jsonb) ? 'location');

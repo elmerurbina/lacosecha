@@ -6,6 +6,7 @@ import { sb, friendlyError } from '../sb';
 import { h, icon, toast, loading, errorState } from '../dom';
 import { buildField, validateAll, cleanupMedia, type FieldControl } from '../fields';
 import type { Field, Row } from '../resources';
+import { siteInfo as seedSite } from '../../data/seed';
 
 const SETTINGS_FIELDS: { title: string; fields: Field[] }[] = [
   {
@@ -108,7 +109,9 @@ async function renderSettings(panel: HTMLElement) {
   if (error) { panel.replaceChildren(errorState(friendlyError(error), () => renderSettings(panel))); return; }
   const settings: Row = data?.data ?? {};
 
-  const groups = SETTINGS_FIELDS.map((g) => ({ ...g, controls: g.fields.map((f) => buildField(f, getPath(settings, f.key))) }));
+  const groups = SETTINGS_FIELDS.map((g) => ({ ...g, controls: g.fields.map((f) => buildField(f,
+    // Si aún no se ha guardado un punto, se muestra el que usa el sitio público.
+    f.key === 'location' ? (getPath(settings, f.key) ?? seedSite.location ?? null) : getPath(settings, f.key))) }));
   const controls = groups.flatMap((g) => g.controls);
   const formError = h('p', { class: 'field-error', role: 'alert' });
   const save = h('button', { type: 'submit', class: 'abtn abtn--primary' }, icon('check'), 'Guardar cambios');

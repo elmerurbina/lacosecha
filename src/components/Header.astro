@@ -94,20 +94,22 @@ const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWit
     background: rgba(10, 10, 10, 0.94);
     border-bottom-color: var(--line);
   }
+  /* El encabezado usa todo el ancho con márgenes laterales mínimos para que el menú quepa en una línea. */
   .site-header__inner {
-    height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    max-width: 1440px; padding-inline: clamp(12px, 1.6vw, 28px);
   }
   .site-header__brand { text-decoration: none; flex: none; }
 
-  .site-nav { display: flex; align-items: center; gap: 22px; }
-  .site-nav ul { list-style: none; display: flex; gap: 4px; margin: 0; padding: 0; }
+  .site-nav { display: flex; align-items: center; gap: clamp(10px, 1.2vw, 20px); }
+  .site-nav ul { list-style: none; display: flex; gap: 0; margin: 0; padding: 0; }
   .site-nav ul a {
-    display: block; padding: 8px 12px; border-radius: 999px;
+    display: block; padding: 8px clamp(7px, 0.75vw, 12px); border-radius: 999px; white-space: nowrap;
     color: var(--text); text-decoration: none; font-size: 0.93rem; font-weight: 600;
     position: relative; transition: color 0.2s;
   }
   .site-nav ul a::after {
-    content: ''; position: absolute; left: 12px; right: 12px; bottom: 3px; height: 2px;
+    content: ''; position: absolute; left: clamp(7px, 0.75vw, 12px); right: clamp(7px, 0.75vw, 12px); bottom: 3px; height: 2px;
     background: var(--gold); border-radius: 2px;
     transform: scaleX(0); transition: transform 0.3s var(--ease);
   }
@@ -125,7 +127,7 @@ const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWit
   .is-open .site-header__toggle :global(.i-open) { display: none; }
   .is-open .site-header__toggle :global(.i-close) { display: block; }
 
-  @media (max-width: 1200px) {
+  @media (max-width: 1140px) {
     .site-header__toggle { display: inline-flex; }
     .site-nav {
       /* absolute: el backdrop-filter del header crea el bloque contenedor */
