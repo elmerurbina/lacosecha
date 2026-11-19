@@ -371,3 +371,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .gal__icon--danger:hover { color: var(--danger) !important; }
 .gal__empty { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 28px; color: var(--muted); font-size: 0.85rem; }
 .gal__item--loading .gal__thumb { min-height: 100px; }
+
+/* Enlace de Facebook */
+.fb__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.fb__actions [hidden] { display: none !important; }
+.fb__status { margin: 0; font-size: 0.84rem; color: var(--muted); }
+.fb__status:empty { display: none; }
+.fb__status[data-tone='ok'] { color: #7fd29b; }
+.fb__status[data-tone='warn'] { color: var(--gold-light); }
+.fb__preview { display: grid; gap: 6px; }
+.fb__preview iframe { width: 100%; max-width: 560px; aspect-ratio: 16 / 9; border: 1px solid var(--line); border-radius: 10px; background: #000; }

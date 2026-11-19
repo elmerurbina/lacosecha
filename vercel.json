@@ -26,7 +26,7 @@
   ],
   "rewrites": [
     {
-      "source": "/:path((?!_astro/|images/|admin/|admin$)(?!.*\\.[A-Za-z0-9]+$).*)",
+      "source": "/:path((?!_astro/|images/|api/|admin/|admin$)(?!.*\\.[A-Za-z0-9]+$).*)",
       "has": [
         {
           "type": "host",

@@ -3,7 +3,8 @@
  * La base de datos vuelve a validar con CHECKs y RLS.
  */
 import { h, icon, toast } from './dom';
-import { friendlyError } from './sb';
+import { sb, friendlyError } from './sb';
+import { parseFacebookUrl, facebookEmbedSrc, type FacebookLink } from '../lib/facebook';
 import { uploadMedia, removeMedia, type MediaKind } from './upload';
 import type { Field } from './resources';
 
@@ -21,6 +22,12 @@ export interface FieldControl {
   /** Todos los archivos subidos en esta edición (para descartar si no se guarda) */
   discarded(): string[];
   busy(): boolean;
+  /** Espera tareas pendientes del campo (p. ej. convertir un enlace) antes de validar. */
+  ready?(): Promise<void>;
+  /** Solo campos de imagen/video: avisa cuando se sube un archivo. */
+  onUpload?(cb: (file: File, url: string) => void): void;
+  /** Solo campos de imagen/video: asigna un archivo ya subido (p. ej. portada generada). */
+  setUploaded?(url: string): void;
 }
 
 let uid = 0;
@@ -84,6 +91,8 @@ export function buildField(field: Field, value: unknown): FieldControl {
       return mediaField(field, value as string | null, id, wrap, err);
     case 'geo':
       return geoField(field, value as GeoPoint | null, id, err, help, describedBy);
+    case 'facebook':
+      return facebookField(field, (value as string | null) ?? null, id, err, help, describedBy, req);
     case 'gallery':
       return galleryField(field, value as GalleryValue | null, id, err, help);
     default: {
@@ -126,6 +135,7 @@ function mediaField(field: Field, initial: string | null, id: string, wrap: (c: 
   let current = original;
   let uploading = false;
   const uploadedUrls: string[] = [];
+  const uploadListeners: ((file: File, url: string) => void)[] = [];
 
   const preview = h('div', { class: 'media__preview' });
   const input = h('input', { id, type: 'file', class: 'sr-only', accept: kind === 'image' ? 'image/jpeg,image/png,image/webp,image/avif' : 'video/mp4' });
@@ -158,6 +168,7 @@ function mediaField(field: Field, initial: string | null, id: string, wrap: (c: 
       current = url;
       status.textContent = 'Archivo listo. Guarda para aplicar el cambio.';
       render();
+      uploadListeners.forEach((cb) => cb(file, url));
     } catch (e) {
       const m = e instanceof Error && !('statusCode' in e) && !('code' in e) ? e.message : friendlyError(e);
       err.textContent = m;
@@ -184,6 +195,13 @@ function mediaField(field: Field, initial: string | null, id: string, wrap: (c: 
     uploaded: () => uploadedUrls.filter((u) => u !== current),
     discarded: () => [...uploadedUrls],
     busy: () => uploading,
+    onUpload: (cb) => { uploadListeners.push(cb); },
+    setUploaded: (url) => {
+      uploadedUrls.push(url);
+      current = url;
+      status.textContent = 'Portada generada automáticamente a partir del video. Puedes cambiarla.';
+      render();
+    },
   };
 }
 
@@ -351,6 +369,103 @@ function geoField(field: Field, initial: GeoPoint | null, id: string, err: HTMLE
     },
     replaced: () => [], uploaded: () => [], discarded: () => [],
     busy: () => watchId !== null,
+  };
+}
+
+/* ---------- Enlace de Facebook: se convierte al formato del reproductor ---------- */
+function facebookField(field: Field, initial: string | null, id: string, err: HTMLElement, help: HTMLElement | null, describedBy: string, req: Node | null): FieldControl {
+  const input = h('input', { id, type: 'url', inputmode: 'url', maxLength: 600, placeholder: field.placeholder, 'aria-describedby': describedBy, autocomplete: 'off' });
+  input.value = initial ?? '';
+  const status = h('p', { class: 'fb__status', role: 'status', 'aria-live': 'polite' });
+  const previewBox = h('div', { class: 'fb__preview', hidden: true });
+  const testBtn = h('button', { type: 'button', class: 'abtn abtn--ghost abtn--sm' }, icon('play', 15), 'Probar reproductor');
+  const openLink = h('a', { class: 'abtn abtn--ghost abtn--sm', target: '_blank', rel: 'noopener' }, icon('external', 15), 'Abrir en Facebook');
+  let resolving: Promise<void> | null = null;
+  let lastResolved = '';
+
+  const setStatus = (text: string, tone: 'ok' | 'warn' | '' = '') => { status.textContent = text; status.dataset.tone = tone; };
+  const syncButtons = () => {
+    const v = input.value.trim();
+    const p = v ? parseFacebookUrl(v) : null;
+    testBtn.hidden = !p || p.kind === 'share' || p.kind === 'unknown';
+    openLink.hidden = !p;
+    if (p) openLink.href = v;
+  };
+
+  const explain = (link: FacebookLink | null) => {
+
+    if (!link) return setStatus('');
+    if (link.kind === 'video') setStatus('✓ Enlace de video listo para el reproductor.', 'ok');
+    else if (link.kind === 'post') setStatus('Es el enlace de una publicación: se mostrará la publicación con su video. Si puedes, usa el enlace directo del video (clic en el video → «Copiar enlace»).', 'warn');
+    else if (link.kind === 'share') setStatus('No se pudo convertir este enlace de «Compartir». Abre el video en Facebook, haz clic en la fecha o en el video y copia el enlace de la barra de direcciones (debe contener /videos/, /reel/ o watch?v=).', 'warn');
+    else setStatus('Este enlace no parece ser de un video (por ejemplo, es el perfil de la página). Pega el enlace directo del video.', 'warn');
+  };
+
+  async function resolve() {
+    const v = input.value.trim();
+    syncButtons();
+    previewBox.hidden = true; previewBox.replaceChildren();
+    if (!v || v === lastResolved) return;
+    const local = parseFacebookUrl(v);
+    if (!local) { setStatus(''); return; }
+    if (local.kind === 'video' || local.kind === 'post') {
+      input.value = local.href; lastResolved = local.href; explain(local); syncButtons(); return;
+    }
+    if (local.kind === 'unknown') { lastResolved = v; explain(local); return; }
+    setStatus('Convirtiendo el enlace…');
+    try {
+      const { data } = await sb.auth.getSession();
+      const res = await fetch('/api/facebook-resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${data.session?.access_token ?? ''}` },
+        body: JSON.stringify({ url: v }),
+      });
+      const link = res.ok ? (await res.json()) as FacebookLink : local;
+      if (link.kind === 'video' || link.kind === 'post') input.value = link.href;
+      lastResolved = input.value.trim();
+      explain(link);
+    } catch {
+      explain(local);
+    }
+    syncButtons();
+  }
+
+  input.addEventListener('change', () => { resolving = resolve(); });
+  input.addEventListener('paste', () => setTimeout(() => { resolving = resolve(); }, 0));
+  testBtn.addEventListener('click', () => {
+    const p = parseFacebookUrl(input.value.trim());
+    if (!p) return;
+    if (!previewBox.hidden) { previewBox.hidden = true; previewBox.replaceChildren(); return; }
+    const frame = h('iframe', { src: facebookEmbedSrc(p).replace('&autoplay=true', ''), title: 'Vista previa del reproductor de Facebook', allow: 'autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share', allowFullscreen: true });
+    previewBox.replaceChildren(frame,
+      h('p', { class: 'field-help' }, 'Si aquí dice «video no disponible», el video no es público o su dueño desactivó la opción de insertarlo: en Facebook, el video debe ser Público y permitir «Insertar».'));
+    previewBox.hidden = false;
+  });
+
+  if (initial) { explain(parseFacebookUrl(initial)); lastResolved = initial; }
+  syncButtons();
+
+  const el = h('div', { class: 'afield afield--full afield--facebook' },
+    h('label', { for: id }, field.label, req),
+    input, help,
+    h('div', { class: 'fb__actions' }, testBtn, openLink),
+    status, previewBox, err);
+
+  return {
+    field, el,
+    get: () => input.value.trim() || null,
+    focus: () => input.focus(),
+    showError: (m) => { err.textContent = m; },
+    validate: () => {
+      const v = input.value.trim();
+      if (!v) return field.required ? 'Este campo es obligatorio.' : null;
+      if (!parseFacebookUrl(v)) return 'Pega un enlace de facebook.com que comience con https://';
+      if (/^https:\/\/fb\.watch\//i.test(v)) return 'No se pudo convertir el enlace fb.watch. Usa el enlace directo del video.';
+      return null;
+    },
+    replaced: () => [], uploaded: () => [], discarded: () => [],
+    busy: () => false,
+    ready: async () => { await resolving; },
   };
 }
 

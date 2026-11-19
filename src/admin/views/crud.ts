@@ -12,7 +12,7 @@ function galleryValue(row: Row): GalleryValue {
     : row.image ? [{ url: row.image, type: 'image' as const }] : [];
   return { media, cover: row.cover ?? row.image ?? null };
 }
-import { removeMedia } from '../upload';
+import { removeMedia, frameFromVideo, uploadMedia } from '../upload';
 import type { Resource, Row } from '../resources';
 
 export async function renderCrud(root: HTMLElement, r: Resource, params: string[]) {
@@ -156,6 +156,23 @@ async function renderForm(root: HTMLElement, r: Resource, id: string | null) {
     f.type === 'geo' ? geoValue(row[f.latKey!], row[f.lngKey!])
     : f.type === 'gallery' ? galleryValue(row)
     : row[f.key]));
+  // Portada automática: al subir un MP4 sin portada, se genera una con un fotograma del video.
+  let autoCoverTask: Promise<void> | null = null;
+  if (r.autoCover) {
+    const videoCtl = controls.find((c) => c.field.key === r.autoCover!.video);
+    const coverCtl = controls.find((c) => c.field.key === r.autoCover!.cover);
+    videoCtl?.onUpload?.((file) => {
+      if (!coverCtl || coverCtl.get()) return;
+      autoCoverTask = (async () => {
+        try {
+          const frame = await frameFromVideo(file);
+          const url = await uploadMedia(frame, 'image', coverCtl.field.folder ?? 'general');
+          if (!coverCtl.get()) coverCtl.setUploaded?.(url); else cleanupMedia([url]);
+        } catch { /* si falla, la prédica usa la portada con el título */ }
+      })();
+    });
+  }
+
   const formError = h('p', { class: 'field-error', role: 'alert' });
   const saveBtn = h('button', { type: 'submit', class: 'abtn abtn--primary' }, icon('check'), 'Guardar');
   let saved = false;
@@ -182,6 +199,8 @@ async function renderForm(root: HTMLElement, r: Resource, id: string | null) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     formError.textContent = '';
+    await Promise.all(controls.map((c) => c.ready?.()));
+    if (autoCoverTask) await autoCoverTask;
     if (!validateAll(controls)) { formError.textContent = 'Revisa los campos marcados.'; return; }
     const payload: Row = {};
     controls.forEach((c) => {

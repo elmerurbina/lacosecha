@@ -61,6 +61,31 @@ export async function uploadMedia(file: File, kind: MediaKind, folder: string): 
   return sb.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
 }
 
+/**
+ * Genera una portada (WebP) a partir de un fotograma del video, en el navegador.
+ * Se usa el archivo local (no la URL) para que el lienzo no quede bloqueado por CORS.
+ */
+export async function frameFromVideo(file: File, at = 3): Promise<File> {
+  const url = URL.createObjectURL(file);
+  try {
+    const v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.preload = 'auto'; v.src = url;
+    await new Promise<void>((ok, fail) => { v.onloadeddata = () => ok(); v.onerror = () => fail(new Error('No se pudo leer el video.')); });
+    const t = Math.min(at, Math.max(0, (v.duration || 0) / 3));
+    if (t > 0) await new Promise<void>((ok) => { v.onseeked = () => ok(); v.currentTime = t; });
+    const scale = Math.min(1, 1280 / (v.videoWidth || 1280));
+    const c = document.createElement('canvas');
+    c.width = Math.round((v.videoWidth || 1280) * scale);
+    c.height = Math.round((v.videoHeight || 720) * scale);
+    c.getContext('2d')!.drawImage(v, 0, 0, c.width, c.height);
+    const blob = await new Promise<Blob | null>((r) => c.toBlob(r, 'image/webp', 0.85));
+    if (!blob) throw new Error('No se pudo generar la portada.');
+    return new File([blob], 'portada.webp', { type: 'image/webp' });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 /** Elimina un archivo del bucket si la URL pertenece a él (ignora URLs externas). */
 export async function removeMedia(url?: string | null): Promise<void> {
   if (!url) return;

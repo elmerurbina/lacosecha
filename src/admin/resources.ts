@@ -5,7 +5,7 @@
 import { h, fmtDate, fmtTime, DAYS } from './dom';
 
 export type FieldType =
-  | 'text' | 'textarea' | 'number' | 'date' | 'time' | 'select' | 'checkbox' | 'list' | 'image' | 'video' | 'url' | 'geo' | 'gallery';
+  | 'text' | 'textarea' | 'number' | 'date' | 'time' | 'select' | 'checkbox' | 'list' | 'image' | 'video' | 'url' | 'geo' | 'gallery' | 'facebook';
 
 export interface Field {
   key: string;
@@ -51,6 +51,8 @@ export interface Resource {
   hasPublish?: boolean;
   description?: string;
   validate?: (row: Row) => string | null;
+  /** Genera la portada desde un fotograma del video subido si no hay una. */
+  autoCover?: { video: string; cover: string };
 }
 
 const thumb = (url?: string | null) =>
@@ -234,6 +236,7 @@ export const RESOURCES: Resource[] = [
   {
     path: 'predicas', table: 'sermons', title: 'Prédicas', singular: 'prédica', icon: 'play',
     description: 'Videos MP4 o enlaces de Facebook. Sin archivo ni enlace se muestra como «contenido pendiente».',
+    autoCover: { video: 'video_url', cover: 'cover' },
     idType: 'uuid',
     order: [{ column: 'date', ascending: false }],
     search: ['title', 'preacher'],
@@ -250,9 +253,11 @@ export const RESOURCES: Resource[] = [
       { key: 'date', label: 'Fecha de publicación', type: 'date', required: true },
       { key: 'preacher', label: 'Predicador', type: 'text', max: 80 },
       { key: 'description', label: 'Descripción', type: 'textarea', max: 1500, full: true },
-      { key: 'facebook_url', label: 'Enlace de Facebook', type: 'url', max: 500, full: true, pattern: '^https://(www\\.|m\\.)?facebook\\.com/.+', placeholder: 'https://www.facebook.com/…/videos/…', help: 'Pega el enlace de la publicación o video.' },
+      { key: 'facebook_url', label: 'Enlace de Facebook', type: 'facebook', max: 500, full: true, placeholder: 'https://www.facebook.com/…/videos/…',
+        help: 'Pega el enlace del video (también sirven los de «Compartir»); se convierte solo al formato del reproductor. El video debe ser Público en Facebook.' },
       { key: 'video_url', label: 'Archivo de video MP4 (máx. 50 MB)', type: 'video', folder: 'predicas', full: true },
-      { key: 'cover', label: 'Imagen de portada', type: 'image', folder: 'predicas', full: true },
+      { key: 'cover', label: 'Imagen de portada (opcional)', type: 'image', folder: 'predicas', full: true,
+        help: 'Con video MP4 se genera sola a partir del video. Facebook no permite obtener su portada: si no subes una, el sitio muestra una portada con el título de la prédica.' },
       published,
     ],
   },

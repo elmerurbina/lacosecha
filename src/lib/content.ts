@@ -8,6 +8,7 @@
  */
 import { SUPABASE_URL, SUPABASE_ANON_KEY as SUPABASE_KEY } from 'astro:env/client';
 import * as seed from '../data/seed';
+import { parseFacebookUrl, resolveFacebookUrl } from './facebook';
 import type {
   AboutSection, Announcement, CellGroup, ChurchEvent, GalleryItem, Ministry, Schedule, Sermon, SiteInfo,
 } from './types';
@@ -89,4 +90,21 @@ export const getGallery = () =>
   fromSupabase<GalleryItem>('gallery', 'select=id,title,description,image,featured&published=eq.true&category=in.(general,destacada)&order=created_at.desc', seed.gallery);
 
 export const getSermons = () =>
-  fromSupabase<Sermon>('sermons', 'select=id,title,description,preacher,date,videoUrl:video_url,facebookUrl:facebook_url,cover&published=eq.true&order=date.desc', seed.sermons);
+  fromSupabase<Sermon>('sermons', 'select=id,title,description,preacher,date,videoUrl:video_url,facebookUrl:facebook_url,cover&published=eq.true&order=date.desc', seed.sermons)
+    .then((rows) => Promise.all(rows.map(async (s) => (s.facebookUrl ? { ...s, facebookUrl: await playableFacebookUrl(s.facebookUrl) } : s))));
+
+/**
+ * Enlaces de Facebook guardados en formato «Compartir» (facebook.com/share/…) no se pueden
+ * reproducir embebidos: se resuelven al enlace directo del video (una vez, con caché de 12 h).
+ */
+const fbCache = new Map<string, { href: string; at: number }>();
+async function playableFacebookUrl(url: string): Promise<string> {
+  const p = parseFacebookUrl(url);
+  if (!p || p.kind !== 'share') return url;
+  const hit = fbCache.get(url);
+  if (hit && Date.now() - hit.at < 12 * 3600_000) return hit.href;
+  const r = await resolveFacebookUrl(url);
+  const href = r && r.kind !== 'share' ? r.href : url;
+  fbCache.set(url, { href, at: Date.now() });
+  return href;
+}
